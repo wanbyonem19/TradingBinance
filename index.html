@@ -1703,6 +1703,28 @@
         if (v == null || isNaN(v)) return "—";
         return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
       }
+      function posTpSl(p){
+        // SL/TP tidak datang dari data posisi (positionRisk tidak memuatnya) —
+        // keduanya hidup sebagai order terpisah di daftar order terbuka:
+        // STOP_MARKET penutup = stop loss, TAKE_PROFIT_MARKET penutup = take
+        // profit, arahnya berlawanan dengan arah posisi. Pasangkan dari sana
+        // supaya terbaca di kartu posisi.
+        var amt = parseFloat(p.positionAmt);
+        var closeSide = amt > 0 ? "SELL" : "BUY";
+        var sl = null, tp = null;
+        (state.openOrders || []).forEach(function(o){
+          if (o.symbol !== p.symbol) return;
+          if (o.side !== closeSide) return;
+          var closing = o.closePosition === true || o.closePosition === "true" ||
+                        o.reduceOnly === true || o.reduceOnly === "true";
+          if (!closing) return;
+          var sp = parseFloat(o.stopPrice);
+          if (!(sp > 0)) return;
+          if ((o.type === "STOP_MARKET" || o.type === "STOP") && sl == null) sl = sp;
+          else if ((o.type === "TAKE_PROFIT_MARKET" || o.type === "TAKE_PROFIT") && tp == null) tp = sp;
+        });
+        return { sl: sl, tp: tp };
+      }
       function renderPositions(){
         var box = $("posList");
         $("posCount").textContent = state.positions.length ? "(" + state.positions.length + ")" : "";
@@ -1725,6 +1747,13 @@
           // Persen naik/turun harga dari harga masuk ke mark price,
           // dibalik untuk posisi SHORT (harga turun = untung).
           var movePct = (entry > 0 && !isNaN(mark)) ? ((mark - entry) / entry) * 100 * (long ? 1 : -1) : null;
+          var tpsl = posTpSl(p);
+          var slTxt = tpsl.sl != null
+            ? fmtPrice(tpsl.sl) + (entry > 0 ? " (" + fmtPctSigned(((tpsl.sl - entry) / entry) * 100) + " dari masuk)" : "")
+            : "— belum dipasang";
+          var tpTxt = tpsl.tp != null
+            ? fmtPrice(tpsl.tp) + (entry > 0 ? " (" + fmtPctSigned(((tpsl.tp - entry) / entry) * 100) + " dari masuk)" : "")
+            : "— belum dipasang";
           return '<div class="pos-card">' +
             '<div class="pos-top"><span class="pos-sym mono">' + esc(p.symbol) + '</span>' +
             '<span class="side-tag ' + (long ? "long" : "short") + '">' + (long ? "LONG" : "SHORT") + "</span>" +
@@ -1737,6 +1766,8 @@
             '<div><span class="k">Mark price</span><span class="v mono">' + fmtPrice(mark) + "</span></div>" +
             '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + " USDT (" + fmtPctSigned(roi) + ")</span></div>" +
             '<div><span class="k">Naik/turun dari harga masuk</span><span class="v mono ' + (movePct >= 0 ? "up" : "down") + '">' + fmtPctSigned(movePct) + "</span></div>" +
+            '<div><span class="k">Stop loss</span><span class="v mono ' + (tpsl.sl != null ? "down" : "") + '">' + esc(slTxt) + "</span></div>" +
+            '<div><span class="k">Take profit</span><span class="v mono ' + (tpsl.tp != null ? "up" : "") + '">' + esc(tpTxt) + "</span></div>" +
             '<div><span class="k">Harga likuidasi</span><span class="v mono">' + fmtPrice(parseFloat(p.liquidationPrice)) + "</span></div>" +
             '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(margin) + " USDT</span></div>" +
             "</div></div>";
@@ -1760,13 +1791,18 @@
         }
         box.innerHTML = state.openOrders.map(function(o){
           var sideCls = o.side === "BUY" ? "up" : "down";
+          var typeLabel = o.type === "STOP_MARKET" ? "Stop Loss"
+            : o.type === "TAKE_PROFIT_MARKET" ? "Take Profit"
+            : o.type === "STOP" ? "Stop Loss (limit)"
+            : o.type === "TAKE_PROFIT" ? "Take Profit (limit)"
+            : o.type;
           return '<div class="order-row mono">' +
             "<span><b>" + esc(o.symbol) + "</b></span>" +
             '<span class="' + sideCls + '">' + esc(o.side) + "</span>" +
-            "<span>" + esc(o.type) + "</span>" +
+            "<span>" + esc(typeLabel) + "</span>" +
             "<span>Qty " + esc(o.origQty) + "</span>" +
             "<span>Harga " + (parseFloat(o.price) > 0 ? fmtPrice(parseFloat(o.price)) : "Market") + "</span>" +
-            (parseFloat(o.stopPrice) > 0 ? "<span>Stop " + fmtPrice(parseFloat(o.stopPrice)) + "</span>" : "") +
+            (parseFloat(o.stopPrice) > 0 ? "<span>Trigger " + fmtPrice(parseFloat(o.stopPrice)) + "</span>" : "") +
             '<span class="grow"></span>' +
             '<button type="button" class="btn btn-small" data-cancel="' + esc(o.symbol) + ":" + esc(o.orderId) + '">Batalkan</button>' +
             "</div>";
