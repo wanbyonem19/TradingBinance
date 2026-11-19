@@ -288,6 +288,13 @@
         .order-panel.open .cap-row{ display:flex; }
         .order-panel.open .fineprint{ display:block; }
         .order-toggle{ display:inline-block; }
+        /* Kontrol di dekat ujung halaman tidak boleh berhenti tepat di
+           belakang bar order yang menempel di bawah: beri ruang ekstra
+           saat elemen digulir ke tampilan. */
+        button, input, select, .panel, .tab-body{
+          scroll-margin-bottom:calc(104px + env(safe-area-inset-bottom, 0px));
+        }
+        html{ scroll-padding-bottom:calc(118px + env(safe-area-inset-bottom, 0px)); }
       }
 
       /* ---------- Bottom panel ---------- */
@@ -382,6 +389,82 @@
         .g-vol{ display:none; }
         .gainers-head .chip-row{ margin-left:0; }
       }
+
+      /* ---------- Menu utama (navigasi tampilan) ---------- */
+      .main-nav{
+        display:flex; gap:6px; margin-top:10px; padding:5px;
+        background:var(--panel); border:1px solid var(--border); border-radius:11px;
+      }
+      .main-nav button{
+        flex:1; min-height:46px; border:0; border-radius:8px; background:transparent;
+        color:var(--muted); font-weight:700; font-size:14px; padding:6px 10px;
+        display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;
+      }
+      .main-nav button.active{ background:var(--panel-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border); }
+      .main-nav button.active .nav-dot{ background:var(--accent); }
+      .nav-dot{ width:7px; height:7px; border-radius:50%; background:var(--faint); flex:none; }
+      .nav-badge{ font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--input-bg); border:1px solid var(--border-soft); }
+      .nav-badge.up{ color:var(--green); }
+      .nav-badge.down{ color:var(--red); }
+      @media (max-width:560px){
+        .main-nav button{ font-size:13px; min-height:44px; }
+      }
+      .view[hidden]{ display:none !important; }
+
+      /* ---------- Manajemen Risiko & Keuntungan ---------- */
+      .risk-panel{ margin-top:10px; padding:14px; }
+      .risk-head{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:6px; }
+      .risk-head h2{ font-size:15px; margin:0; flex:1 1 auto; }
+      .risk-note{ font-size:12.5px; color:var(--muted); margin:0 0 12px; line-height:1.55; }
+      .risk-note b{ color:var(--text); }
+      .pnl-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px; }
+      @media (max-width:560px){ .pnl-cards{ grid-template-columns:repeat(2,1fr); } }
+      .netting-box{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:9px; padding:11px 12px; margin-bottom:12px; font-size:12.5px; line-height:1.6; }
+      .netting-box b{ font-size:13px; }
+      .netting-eq{ display:flex; flex-wrap:wrap; gap:6px 14px; margin-top:6px; }
+      .pnl-card{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:9px; padding:10px 12px; }
+      .pnl-card .k{ display:block; font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.02em; margin-bottom:4px; }
+      .pnl-card .v{ display:block; font-size:17px; font-weight:700; line-height:1.2; }
+      .pnl-card .s{ display:block; font-size:11.5px; color:var(--muted); margin-top:3px; }
+      .risk-grid{ display:grid; grid-template-columns:1.15fr .85fr; gap:18px; align-items:start; }
+      @media (max-width:960px){ .risk-grid{ grid-template-columns:1fr; } }
+      .risk-subhead{ font-size:13.5px; font-weight:700; margin:0 0 8px; display:flex; align-items:center; gap:8px; }
+      .risk-subhead span{ font-size:11.5px; font-weight:500; color:var(--muted); }
+      .pnl-table-head, .pnl-row{ display:grid; grid-template-columns:1.25fr .95fr .75fr .75fr .95fr; gap:8px; align-items:center; padding:7px 6px; font-size:12.5px; }
+      .pnl-table-head{ color:var(--muted); font-size:11px; font-weight:700; letter-spacing:.03em; border-bottom:1px solid var(--border); }
+      .pnl-row{ border-bottom:1px solid var(--border-soft); }
+      .pnl-row:last-child{ border-bottom:0; }
+      .pnl-row.today{ background:var(--panel-2); border-radius:7px; border-bottom-color:transparent; }
+      .pnl-row .d{ font-weight:700; }
+      .pnl-row .d small{ display:block; font-weight:500; color:var(--muted); font-size:11px; }
+      .pnl-row .num{ text-align:right; font-weight:600; }
+      .pnl-table-head .num{ text-align:right; }
+      @media (max-width:560px){
+        .pnl-table-head, .pnl-row{ grid-template-columns:1.05fr .78fr .78fr .9fr; font-size:11.5px; gap:6px; }
+        .pnl-col-hide{ display:none; }
+      }
+      .meter-wrap{ margin:10px 0 12px; }
+      .meter-top{ display:flex; justify-content:space-between; gap:10px; font-size:12.5px; margin-bottom:6px; }
+      .meter-top span:first-child{ color:var(--muted); }
+      .meter-top span:last-child{ font-weight:700; }
+      .meter{ height:10px; border-radius:999px; background:var(--input-bg); border:1px solid var(--border-soft); overflow:hidden; }
+      .meter-fill{ height:100%; border-radius:999px; background:var(--green); transition:width .35s ease; }
+      .meter-fill.warn{ background:var(--accent); }
+      .meter-fill.danger{ background:var(--red); }
+      .meter-fill.target{ background:var(--green); }
+      .risk-fields{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+      @media (max-width:560px){ .risk-fields{ grid-template-columns:1fr 1fr; } }
+      .risk-fields .field{ margin-bottom:0; }
+      .risk-metrics{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px; font-size:12.5px; margin-bottom:10px; }
+      .risk-warn{ border-radius:8px; padding:9px 11px; font-size:12.5px; margin-bottom:8px; border:1px solid; line-height:1.5; }
+      .risk-warn.ok{ background:var(--panel-2); border-color:var(--border-soft); color:var(--muted); }
+      .risk-warn.warn{ background:var(--warn-bg); border-color:var(--warn-border); color:var(--warn-text); }
+      .risk-warn.danger{ background:var(--danger-bg); border-color:var(--danger-border); color:var(--danger-text); }
+      .calc-box{ border:1px solid var(--border-soft); border-radius:8px; padding:11px 12px; background:var(--panel-2); }
+      .calc-box h4{ margin:0 0 4px; font-size:13px; }
+      .calc-box p{ margin:0 0 10px; font-size:12px; color:var(--muted); line-height:1.5; }
+      .calc-result{ font-size:12.5px; margin-top:10px; line-height:1.6; }
+      .calc-result b{ font-size:13.5px; }
 
       /* ---------- Diagnosis koneksi ---------- */
       .diag-panel{ margin-top:10px; padding:14px; }
@@ -496,6 +579,13 @@
         <b>Menampilkan harga SPOT (cadangan).</b> Semua alamat API Futures Mainnet Binance gagal dijangkau dari browser ini, jadi harga, grafik, dan top gainer diisi dari data spot publik Binance (data-api.binance.vision) supaya tetap terisi — harga spot bisa sedikit berbeda dari harga futures, dan mark price / funding rate tidak tersedia di mode ini. Pasangan futures-only yang tidak punya pasar spot (mis. EVAA) tidak bisa tampil di mode ini. Order tetap hanya dikirim ke API Futures. Rincian alamat mana yang gagal ada di panel Diagnosis Koneksi di bawah.
       </div>
 
+      <!-- ======================= MENU UTAMA ======================= -->
+      <nav class="main-nav" aria-label="Menu utama">
+        <button type="button" class="active" id="navTerminal" data-view="terminal"><span class="nav-dot"></span>Terminal Trading</button>
+        <button type="button" id="navRisk" data-view="risk"><span class="nav-dot"></span>Risiko &amp; Keuntungan <span class="nav-badge mono" id="navRiskBadge">—</span></button>
+      </nav>
+
+      <div class="view" id="viewTerminal">
       <!-- ======================= MAIN ======================= -->
       <main class="layout">
 
@@ -520,6 +610,7 @@
               <button type="button" class="ct-btn" id="btnZoomOut" aria-label="Perkecil grafik (zoom out)">−</button>
               <button type="button" class="ct-btn" id="btnZoomIn" aria-label="Perbesar grafik (zoom in)">+</button>
               <button type="button" class="ct-btn wide" id="btnZoomReset">Reset</button>
+              <button type="button" class="ct-btn wide" id="btnChartRefresh" title="Muat ulang data grafik & sambung ulang feed harga">↻ Muat Ulang</button>
               <span class="ct-label" id="zoomLabel">— candle</span>
             </div>
             <div class="chart-msg" id="chartMsg">Memuat data harga dari Binance…</div>
@@ -675,6 +766,100 @@
           <div class="log-list" id="logList"><div class="empty">Belum ada aktivitas di sesi ini.</div></div>
         </div>
       </section>
+
+      </div><!-- /viewTerminal -->
+
+      <div class="view" id="viewRisk" hidden>
+      <!-- ======================= MANAJEMEN RISIKO & KEUNTUNGAN (MENU SENDIRI) ======================= -->
+      <section class="panel risk-panel" aria-label="Manajemen risiko dan keuntungan harian">
+        <div class="risk-head">
+          <h2>Manajemen Risiko &amp; Keuntungan Harian</h2>
+          <button type="button" class="btn btn-small" id="btnRefreshPnl">Muat Ulang Keuntungan</button>
+        </div>
+        <p class="risk-note">Menu ini khusus untuk untung, rugi, dan risiko — terpisah dari terminal trading. Semua angka dihitung dari <b>riwayat pendapatan Binance Futures akun kamu</b>. Yang ditampilkan selalu angka <b>BERSIH</b>: dalam satu periode, untung dan rugi <b>saling mengurangi</b>. Contoh: rugi −$1 lalu untung +$2 di periode yang sama hasilnya <b>+$1</b>, bukan +$2. Periode <b>24 jam terakhir</b> berjalan terus (rolling) — dihitung mundur 24 jam dari sekarang dan diperbarui tiap muat ulang, jadi rugi yang belum genap 24 jam tetap terhitung sampai lewat 24 jam. Di bawahnya ada rincian per hari kalender: hari ini, kemarin, besok-besoknya ke belakang sampai 30 hari, plus minggu &amp; bulan. Untuk besok yang belum terjadi, yang dipakai adalah <b>target &amp; batas rugi</b> di kontrol risiko. Batas rugi yang tercapai akan <b>memblokir order baru</b> dari halaman ini.</p>
+
+        <div id="pnlNotConnected"><div class="empty">Belum terhubung — hubungkan API key untuk melihat keuntungan harian dan status risiko dari akun Binance kamu.</div></div>
+
+        <div id="riskContent" hidden>
+          <div class="netting-box mono" id="nettingBox"></div>
+          <div class="pnl-cards" id="pnlCards"></div>
+
+          <div class="risk-grid">
+            <div>
+              <h3 class="risk-subhead">Untung &amp; Rugi per Hari <span>untung dan rugi saling mengurangi → kolom Bersih</span></h3>
+              <div class="pnl-table-head mono"><span>TANGGAL</span><span class="num">UNTUNG (+)</span><span class="num">RUGI (−)</span><span class="num pnl-col-hide">BIAYA*</span><span class="num">BERSIH</span></div>
+              <div id="pnlTable"><div class="empty">Memuat riwayat keuntungan…</div></div>
+              <button type="button" class="gainers-more" id="btnPnlMore">Lihat 30 hari</button>
+              <p class="gainers-note" id="pnlNote"></p>
+
+              <div style="margin-top:16px">
+                <h3 class="risk-subhead">Ringkasan Periode <span>untuk melihat pola, bukan cuma hari ini</span></h3>
+                <div class="est-box mono" style="margin-bottom:0">
+                  <div class="est-row"><span>Minggu ini (Senin — hari ini)</span><span id="sumWeek">—</span></div>
+                  <div class="est-row"><span>Bulan ini</span><span id="sumMonth">—</span></div>
+                  <div class="est-row"><span>Hari untung / hari rugi (30 hari)</span><span id="sumWinDays">—</span></div>
+                  <div class="est-row"><span>Hari terbaik (30 hari)</span><span id="sumBestDay">—</span></div>
+                  <div class="est-row"><span>Hari terburuk (30 hari)</span><span id="sumWorstDay">—</span></div>
+                  <div class="est-row"><span>Rata-rata bersih per hari (30 hari)</span><span id="sumAvgDay">—</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 class="risk-subhead">Kontrol Risiko <span>berlaku untuk order dari halaman ini</span></h3>
+              <div class="risk-fields">
+                <div class="field">
+                  <label for="riskDailyLimit">Batas rugi harian (USDT)</label>
+                  <input type="number" id="riskDailyLimit" inputmode="decimal" min="1" step="1" value="50" />
+                </div>
+                <div class="field">
+                  <label for="riskDailyTarget">Target untung harian (USDT)</label>
+                  <input type="number" id="riskDailyTarget" inputmode="decimal" min="1" step="1" value="25" />
+                </div>
+                <div class="field">
+                  <label for="riskPerTrade">Risiko per trade (% saldo)</label>
+                  <input type="number" id="riskPerTrade" inputmode="decimal" min="0.1" step="0.1" value="1" />
+                </div>
+                <div class="field">
+                  <label for="riskSelfMaxLev">Batas leverage versi kamu (x)</label>
+                  <input type="number" id="riskSelfMaxLev" inputmode="numeric" min="1" step="1" value="20" />
+                </div>
+              </div>
+
+              <div class="meter-wrap">
+                <div class="meter-top"><span>Rugi bersih (terburuk: hari ini / 24 jam berjalan) vs batas rugi</span><span class="mono" id="riskLossLabel">—</span></div>
+                <div class="meter"><div class="meter-fill" id="riskLossBar" style="width:0%"></div></div>
+              </div>
+              <div class="meter-wrap">
+                <div class="meter-top"><span>Untung hari ini vs target harian — patokan juga untuk besok</span><span class="mono" id="riskTargetLabel">—</span></div>
+                <div class="meter"><div class="meter-fill target" id="riskTargetBar" style="width:0%"></div></div>
+              </div>
+
+              <div class="risk-metrics mono" id="riskMetrics"></div>
+              <div id="riskWarnings"></div>
+
+              <div class="calc-box">
+                <h4>Kalkulator Ukuran Posisi dari Risiko</h4>
+                <p>Isi harga masuk &amp; stop loss — jumlah yang aman dihitung dari risiko per trade di atas, supaya kalau kena SL kerugiannya pas sebesar risiko itu, bukan lebih.</p>
+                <div class="risk-fields">
+                  <div class="field">
+                    <label for="calcEntry">Harga masuk</label>
+                    <input type="number" id="calcEntry" inputmode="decimal" min="0" step="any" placeholder="cth. 95000" />
+                  </div>
+                  <div class="field">
+                    <label for="calcSl">Harga stop loss</label>
+                    <input type="number" id="calcSl" inputmode="decimal" min="0" step="any" placeholder="cth. 94000" />
+                  </div>
+                </div>
+                <button type="button" class="btn btn-small btn-accent" id="btnCalcRisk" style="width:100%">Hitung Jumlah Aman</button>
+                <div class="calc-result mono" id="calcResult">Hasil hitungan akan tampil di sini. Tombol di bawah hasil bisa mengisi jumlah itu langsung ke panel order.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      </div><!-- /viewRisk -->
 
       <!-- ======================= DIAGNOSIS KONEKSI ======================= -->
       <section class="panel diag-panel" aria-label="Diagnosis koneksi">
@@ -865,7 +1050,14 @@
         dataSource: "futures",   // "futures" | "spot" — sumber data harga/grafik yang sedang tampil
         futuresDownUntil: 0,     // selama timestamp ini, futures dianggap tak terjangkau (langsung pakai spot)
         spotHostIdx: 0,
-        symbolsFromSpot: false
+        symbolsFromSpot: false,
+        incomeDaily: {},         // "YYYY-MM-DD" (waktu lokal perangkat) -> { realized, grossProfit, grossLoss, funding, commission, other, net, trades }
+        incomeRaw: [],           // catatan pendapatan mentah { time, type, amt } untuk hitungan rolling 24 jam
+        incomeLoadedAt: 0,
+        incomeLoading: false,
+        pnlExpanded: false,
+        view: "terminal",
+        risk: { dailyLossLimit: 50, dailyTarget: 25, perTradePct: 1, selfMaxLev: 20 }
       };
 
       function $(id){ return document.getElementById(id); }
@@ -1237,6 +1429,37 @@
                 runDiagnostics();
               });
           });
+      }
+
+      /* ================= Muat ulang grafik (manual) ================= */
+      // Tombol ↻ Muat Ulang di atas grafik: ambil ulang candle + harga
+      // terakhir dari Binance dan sambung ulang feed live-nya. Dipakai
+      // kalau grafik terasa macet / datanya basi — selama feed sehat,
+      // grafik sebenarnya sudah bergerak sendiri lewat WebSocket/polling.
+      var chartRefreshing = false;
+      function refreshChart(){
+        if (chartRefreshing) return Promise.resolve();
+        chartRefreshing = true;
+        var btn = $("btnChartRefresh");
+        var oldTxt = btn ? btn.textContent : "";
+        if (btn){ btn.disabled = true; btn.textContent = "Memuat…"; }
+        // Jeda cadangan spot berakhir: coba lagi jalur futures dari awal.
+        state.futuresDownUntil = 0;
+        $("chartMsg").textContent = "Memuat ulang data harga dari Binance…";
+        $("chartMsg").classList.add("show");
+        var done = function(){
+          chartRefreshing = false;
+          if (btn){ btn.disabled = false; btn.textContent = oldTxt; }
+        };
+        return Promise.all([
+          loadTicker().catch(function(){ setFeed("off", "Gagal memuat harga"); }),
+          Promise.resolve(loadKlines()).catch(function(){})
+        ]).then(function(){
+          connectWs();
+          addLog("Grafik " + state.symbol + " (" + state.interval + ") dimuat ulang manual.", "ok");
+          toast("Grafik dimuat ulang: " + state.symbol + " " + state.interval + ".", "ok");
+          done();
+        }, function(){ done(); });
       }
 
       /* ================= Sumber data aktif (futures / spot cadangan) ================= */
@@ -1894,6 +2117,7 @@
           state.positions = (res[1] || []).filter(function(p){ return parseFloat(p.positionAmt) !== 0; });
           state.openOrders = res[2] || [];
           renderAccount();
+          loadIncomeHistory(false);
         }).catch(function(e){
           addLog("Gagal memuat data akun: " + e.message, "err");
         });
@@ -1909,6 +2133,7 @@
         $("estAvail").textContent = state.connected ? fmtMoney(state.usdtAvail) + " USDT" : "— (belum terhubung)";
         renderPositions();
         renderOrders();
+        renderPnlAndRisk();
         updateEstimates();
       }
       function posMargin(p){
@@ -2050,6 +2275,344 @@
             addLog("Gagal membatalkan order: " + e.message, "err");
             toast("Gagal membatalkan: " + e.message, "err");
           });
+      }
+
+      /* ================= Keuntungan harian & manajemen risiko ================= */
+      // Data keuntungan diambil dari /fapi/v1/income Binance (endpoint
+      // bertanda tangan, hanya saat API terhubung): tiap catatan pendapatan
+      // dikelompokkan ke hari kalender menurut WAKTU LOKAL perangkat
+      // pengguna, jadi "hari ini" sama dengan hari yang pengguna lihat.
+      // Bersih per hari = PnL terealisasi + funding + komisi (komisi di
+      // Binance selalu negatif) + jenis lain selain transfer antar-dompet.
+      function dayKeyOf(ts){
+        var d = new Date(ts);
+        var m = String(d.getMonth() + 1).padStart(2, "0");
+        var dd = String(d.getDate()).padStart(2, "0");
+        return d.getFullYear() + "-" + m + "-" + dd;
+      }
+      function todayKey(){ return dayKeyOf(Date.now()); }
+      function dayLabel(key, idx){
+        if (idx === 0) return "Hari ini";
+        if (idx === 1) return "Kemarin";
+        var parts = key.split("-");
+        var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+        return d.toLocaleDateString("id-ID", { weekday: "short", day: "numeric", month: "short" });
+      }
+      function signedMoney(n){
+        if (n == null || isNaN(n)) return "—";
+        return (n > 0 ? "+" : n < 0 ? "−" : "") + fmtMoney(Math.abs(n)) + " USDT";
+      }
+      function loadIncomeHistory(force){
+        if (!state.connected || !state.keys || state.incomeLoading) return Promise.resolve();
+        if (!force && state.incomeLoadedAt && (Date.now() - state.incomeLoadedAt) < 60000) return Promise.resolve();
+        state.incomeLoading = true;
+        // Ambil 31 hari terakhir supaya 30 hari penuh + hari ini lengkap.
+        var start = new Date();
+        start.setHours(0, 0, 0, 0);
+        start.setDate(start.getDate() - 30);
+        var startTime = start.getTime();
+        var all = [];
+        function fetchPage(cursor){
+          return signedRequest("GET", "/fapi/v1/income", { startTime: cursor, endTime: Date.now(), limit: 1000 })
+            .then(function(rows){
+              rows = rows || [];
+              all = all.concat(rows);
+              if (rows.length >= 1000 && all.length < 5000){
+                var lastT = Number(rows[rows.length - 1].time) || 0;
+                if (lastT >= cursor) return fetchPage(lastT + 1);
+              }
+              return all;
+            });
+        }
+        return fetchPage(startTime).then(function(rows){
+          var map = {};
+          var raw = [];
+          rows.forEach(function(r){
+            var amt = parseFloat(r.income);
+            if (isNaN(amt)) return;
+            if (r.incomeType === "TRANSFER") return; // pindah dompet bukan untung/rugi trading
+            var t = Number(r.time);
+            raw.push({ time: t, type: r.incomeType, amt: amt });
+            var key = dayKeyOf(t);
+            if (!map[key]) map[key] = { realized: 0, grossProfit: 0, grossLoss: 0, funding: 0, commission: 0, other: 0, net: 0, trades: 0 };
+            var e = map[key];
+            if (r.incomeType === "REALIZED_PNL"){
+              e.realized += amt; e.trades++;
+              // Untung & rugi disimpan TERPISAH dulu (kotor), lalu saling
+              // mengurangi di kolom Bersih: +$2 dan −$1 → bersih +$1.
+              if (amt > 0) e.grossProfit += amt; else if (amt < 0) e.grossLoss += amt;
+            }
+            else if (r.incomeType === "FUNDING_FEE") e.funding += amt;
+            else if (r.incomeType === "COMMISSION") e.commission += amt;
+            else e.other += amt;
+            e.net += amt;
+          });
+          state.incomeDaily = map;
+          state.incomeRaw = raw;
+          state.incomeLoadedAt = Date.now();
+          state.incomeLoading = false;
+          renderPnlAndRisk();
+        }).catch(function(e){
+          state.incomeLoading = false;
+          addLog("Gagal memuat riwayat keuntungan harian: " + e.message, "err");
+          var t = $("pnlTable");
+          if (t && state.connected) t.innerHTML = '<div class="empty">Gagal memuat riwayat keuntungan: ' + esc(e.message) + '. Pakai tombol Muat Ulang Keuntungan untuk mencoba lagi.</div>';
+        });
+      }
+      function dailyNet(key){
+        var e = state.incomeDaily[key];
+        return e ? e.net : 0;
+      }
+      function sumNetDays(keys){
+        var s = 0;
+        keys.forEach(function(k){ s += dailyNet(k); });
+        return s;
+      }
+      function sumGrossDays(keys){
+        var gp = 0, gl = 0, fees = 0;
+        keys.forEach(function(k){
+          var e = state.incomeDaily[k];
+          if (!e) return;
+          gp += e.grossProfit || 0; gl += e.grossLoss || 0;
+          fees += (e.funding || 0) + (e.commission || 0) + (e.other || 0);
+        });
+        return { grossProfit: gp, grossLoss: gl, fees: fees, net: gp + gl + fees };
+      }
+      // Jendela BERJALAN 24 jam: semua catatan dari (sekarang − 24 jam)
+      // sampai sekarang. Ini yang "di-refresh tiap 24 jam": catatan rugi
+      // tetap terhitung selama belum lewat 24 jam, lalu keluar sendiri
+      // dari jendela — dan di dalam jendela, untung & rugi selalu saling
+      // mengurangi jadi satu angka bersih.
+      function rolling24h(){
+        var since = Date.now() - 24 * 60 * 60 * 1000;
+        var gp = 0, gl = 0, fees = 0, realized = 0;
+        (state.incomeRaw || []).forEach(function(r){
+          if (r.time < since) return;
+          if (r.type === "REALIZED_PNL"){
+            realized += r.amt;
+            if (r.amt > 0) gp += r.amt; else if (r.amt < 0) gl += r.amt;
+          } else fees += r.amt;
+        });
+        return { grossProfit: gp, grossLoss: gl, fees: fees, realized: realized, net: gp + gl + fees, since: since };
+      }
+      // Angka risiko yang dipakai untuk batas rugi: yang PALING BURUK antara
+      // hari kalender ini dan jendela rolling 24 jam — supaya rugi semalam
+      // yang belum genap 24 jam tidak "bebas" hanya karena ganti tanggal.
+      function effectivePnl(){
+        var floatP = floatingPnl();
+        var todayAll = dailyNet(todayKey()) + floatP;
+        var rollAll = rolling24h().net + floatP;
+        return { today: todayAll, rolling: rollAll, effective: Math.min(todayAll, rollAll), floating: floatP };
+      }
+      function lastNKeys(n){
+        var keys = [], d = new Date();
+        d.setHours(0, 0, 0, 0);
+        for (var i = 0; i < n; i++){
+          keys.push(dayKeyOf(d.getTime()));
+          d.setDate(d.getDate() - 1);
+        }
+        return keys;
+      }
+      function floatingPnl(){
+        var s = 0;
+        (state.positions || []).forEach(function(p){ s += parseFloat(p.unRealizedProfit) || 0; });
+        return s;
+      }
+      function todayTotalPnl(){
+        return dailyNet(todayKey()) + floatingPnl();
+      }
+      function renderPnlAndRisk(){
+        var notConn = $("pnlNotConnected"), content = $("riskContent");
+        if (!notConn || !content) return;
+        if (!state.connected){
+          notConn.hidden = false;
+          content.hidden = true;
+          var nb0 = $("navRiskBadge");
+          if (nb0){ nb0.textContent = "—"; nb0.className = "nav-badge mono"; }
+          return;
+        }
+        notConn.hidden = true;
+        content.hidden = false;
+
+        var tKey = todayKey();
+        var yKey = lastNKeys(2)[1];
+        var keys7 = lastNKeys(7), keys30 = lastNKeys(30);
+        var todayNet = dailyNet(tKey);
+        var floatP = floatingPnl();
+        var todayAll = todayNet + floatP;
+        var roll = rolling24h();
+        var rollAll = roll.net + floatP;
+        var gToday = sumGrossDays([tKey]);
+        var gY = sumGrossDays([yKey]);
+        var g7 = sumGrossDays(keys7), g30 = sumGrossDays(keys30);
+        // Bulan ini: dari tanggal 1 bulan berjalan sampai hari ini.
+        var nowD = new Date();
+        var monthKeys = [];
+        for (var md = 1; md <= nowD.getDate(); md++) monthKeys.push(dayKeyOf(new Date(nowD.getFullYear(), nowD.getMonth(), md).getTime()));
+        var monthNet = sumNetDays(monthKeys);
+        var gMonth = sumGrossDays(monthKeys);
+        function nettingSub(g, extra){
+          return "Untung " + signedMoney(g.grossProfit) + " · Rugi " + signedMoney(g.grossLoss) + (extra || "");
+        }
+        var cards = [
+          { k: "HARI INI — BERSIH", v: todayAll, s: nettingSub(gToday, " · Mengambang " + signedMoney(floatP)) },
+          { k: "24 JAM TERAKHIR — BERSIH (BERJALAN)", v: rollAll, s: nettingSub(roll, " · diperbarui tiap muat ulang") },
+          { k: "KEMARIN — BERSIH", v: dailyNet(yKey), s: state.incomeDaily[yKey] ? nettingSub(gY, "") : "Tidak ada catatan" },
+          { k: "7 HARI TERAKHIR — BERSIH", v: sumNetDays(keys7), s: nettingSub(g7, " · rata-rata " + signedMoney(sumNetDays(keys7) / 7) + "/hari") },
+          { k: "30 HARI TERAKHIR — BERSIH", v: sumNetDays(keys30), s: nettingSub(g30, " · rata-rata " + signedMoney(sumNetDays(keys30) / 30) + "/hari") },
+          { k: "BULAN INI — BERSIH", v: monthNet, s: nettingSub(gMonth, " · " + nowD.toLocaleDateString("id-ID", { month: "long", year: "numeric" })) }
+        ];
+        $("pnlCards").innerHTML = cards.map(function(c){
+          return '<div class="pnl-card"><span class="k">' + esc(c.k) + '</span><span class="v mono ' + (c.v > 0 ? "up" : c.v < 0 ? "down" : "") + '">' + signedMoney(c.v) + '</span><span class="s">' + esc(c.s) + "</span></div>";
+        }).join("");
+
+        // Kotak persamaan bersih 24 jam — memperlihatkan cara untung & rugi
+        // saling mengurangi, persis seperti contoh: −$1 + $2 = +$1.
+        var nb = $("nettingBox");
+        if (nb){
+          nb.innerHTML = "<b>Hitungan bersih 24 jam terakhir (berjalan)</b>" +
+            '<div class="netting-eq"><span>Total untung <span class="up">' + signedMoney(roll.grossProfit) + '</span></span>' +
+            '<span>Total rugi <span class="down">' + signedMoney(roll.grossLoss) + '</span></span>' +
+            '<span>Biaya (funding + komisi) <span>' + signedMoney(roll.fees) + '</span></span>' +
+            '<span>PnL mengambang <span class="' + (floatP >= 0 ? "up" : "down") + '">' + signedMoney(floatP) + '</span></span>' +
+            '<span>= <b class="' + (rollAll >= 0 ? "up" : "down") + '">BERSIH ' + signedMoney(rollAll) + '</b></span></div>' +
+            '<div style="color:var(--muted)">Jendela 24 jam ini bergeser terus mengikuti jam sekarang (' + new Date(roll.since).toLocaleString("id-ID", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) + " — sekarang). Catatan yang umurnya lewat 24 jam otomatis keluar dari hitungan saat data dimuat ulang.</div>";
+        }
+        // Lencana di menu: bersih hari ini, terlihat tanpa membuka menunya.
+        var badge = $("navRiskBadge");
+        if (badge){
+          badge.textContent = signedMoney(todayAll).replace(" USDT", "");
+          badge.className = "nav-badge mono" + (todayAll > 0 ? " up" : todayAll < 0 ? " down" : "");
+        }
+
+        var showN = state.pnlExpanded ? 30 : 7;
+        var keysShow = lastNKeys(showN);
+        $("pnlTable").innerHTML = keysShow.map(function(key, idx){
+          var e = state.incomeDaily[key] || { realized: 0, grossProfit: 0, grossLoss: 0, funding: 0, commission: 0, other: 0, net: 0 };
+          var has = !!state.incomeDaily[key];
+          var fees = (e.funding || 0) + (e.commission || 0) + (e.other || 0);
+          var bersih = idx === 0 ? (e.net + floatP) : e.net;
+          return '<div class="pnl-row mono' + (idx === 0 ? " today" : "") + '">' +
+            '<span class="d">' + esc(dayLabel(key, idx)) + "<small>" + esc(key) + (idx === 0 ? " · bersih termasuk mengambang " + signedMoney(floatP) : "") + "</small></span>" +
+            '<span class="num up">' + (has ? signedMoney(e.grossProfit) : "—") + "</span>" +
+            '<span class="num down">' + (has ? signedMoney(e.grossLoss) : "—") + "</span>" +
+            '<span class="num pnl-col-hide">' + (has ? signedMoney(fees) : "—") + "</span>" +
+            '<span class="num ' + (bersih > 0 ? "up" : bersih < 0 ? "down" : "") + '">' + (has || idx === 0 ? signedMoney(bersih) : "—") + "</span></div>";
+        }).join("");
+        $("btnPnlMore").textContent = state.pnlExpanded ? "Tampilkan 7 hari saja" : "Lihat 30 hari";
+        $("pnlNote").textContent = state.incomeLoadedAt
+          ? "*Biaya = funding + komisi + pendapatan lain dari Binance. Bersih = Untung + Rugi + Biaya (rugi & biaya bertanda minus, jadi semuanya saling mengurangi). Terakhir dimuat " + new Date(state.incomeLoadedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + " dari riwayat pendapatan Binance; data diperbarui otomatis mengikuti muat ulang akun (tiap ±15 detik, riwayat pendapatan maks. tiap 60 detik) dan tiap pindah ke menu ini. Hari tanpa catatan berarti tidak ada aktivitas tercatat hari itu."
+          : "Memuat riwayat keuntungan dari Binance…";
+
+        // Ringkasan periode
+        var weekKeys = [];
+        var wd = new Date(); wd.setHours(0, 0, 0, 0);
+        var dow = (wd.getDay() + 6) % 7; // Senin = 0
+        for (var wi = 0; wi <= dow; wi++){
+          var tmp = new Date(wd.getTime()); tmp.setDate(tmp.getDate() - (dow - wi));
+          weekKeys.push(dayKeyOf(tmp.getTime()));
+        }
+        var nets30 = keys30.map(function(k){ return { key: k, net: dailyNet(k), has: !!state.incomeDaily[k] }; });
+        var active = nets30.filter(function(x){ return x.has; });
+        var winDays = active.filter(function(x){ return x.net > 0; }).length;
+        var lossDays = active.filter(function(x){ return x.net < 0; }).length;
+        var best = active.slice().sort(function(a, b){ return b.net - a.net; })[0];
+        var worst = active.slice().sort(function(a, b){ return a.net - b.net; })[0];
+        function periodTxt(v){ return '<span class="' + (v > 0 ? "up" : v < 0 ? "down" : "") + '">' + signedMoney(v) + "</span>"; }
+        $("sumWeek").innerHTML = periodTxt(sumNetDays(weekKeys));
+        $("sumMonth").innerHTML = periodTxt(monthNet);
+        $("sumWinDays").textContent = active.length ? (winDays + " untung · " + lossDays + " rugi · " + (active.length - winDays - lossDays) + " impas") : "—";
+        $("sumBestDay").innerHTML = best ? esc(dayLabel(best.key, lastNKeys(30).indexOf(best.key))) + " · " + periodTxt(best.net) : "—";
+        $("sumWorstDay").innerHTML = worst ? esc(dayLabel(worst.key, lastNKeys(30).indexOf(worst.key))) + " · " + periodTxt(worst.net) : "—";
+        $("sumAvgDay").innerHTML = periodTxt(sumNetDays(keys30) / 30);
+
+        renderRiskStatus(todayAll);
+      }
+      function renderRiskStatus(todayAll){
+        var eff = effectivePnl();
+        // Batas rugi memakai angka bersih TERBURUK (hari ini vs 24 jam
+        // berjalan) — bukan cuma hari kalender.
+        var riskPnl = eff.effective;
+        if (todayAll == null) todayAll = eff.today;
+        var r = state.risk;
+        var lossUsed = riskPnl < 0 ? -riskPnl : 0;
+        var lossPct = r.dailyLossLimit > 0 ? Math.min(100, (lossUsed / r.dailyLossLimit) * 100) : 0;
+        var lossBar = $("riskLossBar");
+        lossBar.style.width = lossPct.toFixed(1) + "%";
+        lossBar.className = "meter-fill" + (lossPct >= 100 ? " danger" : lossPct >= 70 ? " warn" : "");
+        $("riskLossLabel").textContent = signedMoney(-lossUsed) + " dari batas −" + fmtMoney(r.dailyLossLimit) + " USDT (" + lossPct.toFixed(0) + "%)";
+        var tgtPct = r.dailyTarget > 0 ? Math.max(0, Math.min(100, (todayAll / r.dailyTarget) * 100)) : 0;
+        $("riskTargetBar").style.width = tgtPct.toFixed(1) + "%";
+        $("riskTargetLabel").textContent = signedMoney(todayAll) + " dari target +" + fmtMoney(r.dailyTarget) + " USDT (" + tgtPct.toFixed(0) + "%)";
+
+        var wallet = state.usdtWallet || 0;
+        var totalMargin = 0, totalExposure = 0, nearestLiq = null, noSlCount = 0;
+        (state.positions || []).forEach(function(p){
+          totalMargin += posMargin(p);
+          var amt = Math.abs(parseFloat(p.positionAmt) || 0);
+          var mark = parseFloat(p.markPrice) || 0;
+          totalExposure += amt * mark;
+          var liq = parseFloat(p.liquidationPrice) || 0;
+          if (liq > 0 && mark > 0){
+            var dist = Math.abs(mark - liq) / mark * 100;
+            if (nearestLiq == null || dist < nearestLiq.dist) nearestLiq = { sym: p.symbol, dist: dist };
+          }
+          if (posTpSl(p).sl == null) noSlCount++;
+        });
+        var marginPct = wallet > 0 ? (totalMargin / wallet) * 100 : null;
+        var riskAmt = wallet > 0 ? wallet * (r.perTradePct / 100) : 0;
+        $("riskMetrics").innerHTML =
+          '<div class="est-row"><span>Saldo dompet USDT</span><span>' + fmtMoney(wallet) + ' USDT</span></div>' +
+          '<div class="est-row"><span>PnL bersih hari ini (realisasi + mengambang)</span><span class="' + (todayAll >= 0 ? "up" : "down") + '">' + signedMoney(todayAll) + '</span></div>' +
+          '<div class="est-row"><span>PnL bersih 24 jam berjalan (+ mengambang)</span><span class="' + (eff.rolling >= 0 ? "up" : "down") + '">' + signedMoney(eff.rolling) + '</span></div>' +
+          '<div class="est-row"><span>Yang dipakai batas rugi (terburuk dari keduanya)</span><span class="' + (riskPnl >= 0 ? "up" : "down") + '">' + signedMoney(riskPnl) + '</span></div>' +
+          '<div class="est-row"><span>Margin terpakai posisi terbuka</span><span>' + fmtMoney(totalMargin) + ' USDT' + (marginPct != null ? " (" + marginPct.toFixed(1) + "% dompet)" : "") + '</span></div>' +
+          '<div class="est-row"><span>Total eksposur (nilai posisi)</span><span>' + fmtMoney(totalExposure) + ' USDT</span></div>' +
+          '<div class="est-row"><span>Posisi terbuka</span><span>' + (state.positions || []).length + ' posisi</span></div>' +
+          '<div class="est-row"><span>Jarak likuidasi terdekat</span><span>' + (nearestLiq ? esc(nearestLiq.sym) + " · " + nearestLiq.dist.toFixed(2) + "% dari mark" : "—") + '</span></div>' +
+          '<div class="est-row"><span>Anggaran risiko per trade kamu</span><span>' + fmtMoney(riskAmt) + ' USDT (' + r.perTradePct + '% saldo)</span></div>';
+
+        var warns = [];
+        if (r.dailyLossLimit > 0 && riskPnl <= -r.dailyLossLimit){
+          warns.push({ cls: "danger", txt: "<b>Batas rugi tercapai.</b> PnL bersih terburuk (hari ini " + signedMoney(todayAll) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas −" + fmtMoney(r.dailyLossLimit) + " USDT. Order baru dari halaman ini diblokir sampai angka bersihnya pulih di atas batas (untung baru akan mengurangi rugi ini secara otomatis) atau sampai kamu menaikkan batasnya dengan sadar. Menutup posisi tetap bisa." });
+        } else if (lossPct >= 70){
+          warns.push({ cls: "warn", txt: "<b>Mendekati batas rugi (" + lossPct.toFixed(0) + "%).</b> Sisa ruang rugi tinggal " + fmtMoney(Math.max(0, r.dailyLossLimit - lossUsed)) + " USDT. Untung berikutnya akan mengurangi rugi bersih ini otomatis; mengejar balik dengan ukuran lebih besar justru mempercepat kena batas." });
+        }
+        if (state.leverage > r.selfMaxLev){
+          warns.push({ cls: "warn", txt: "<b>Leverage panel order (" + state.leverage + "x) di atas batas versi kamu (" + r.selfMaxLev + "x).</b> Order akan diblokir halaman ini — turunkan leverage atau naikkan batasmu dengan sadar." });
+        }
+        if (noSlCount > 0){
+          warns.push({ cls: "warn", txt: "<b>" + noSlCount + " posisi terbuka belum punya stop loss.</b> Tanpa SL, satu gerakan tajam bisa menghabiskan margin. Pasang SL dari aplikasi Binance atau tutup & buka ulang dengan SL dari panel order." });
+        }
+        if (marginPct != null && marginPct >= 50){
+          warns.push({ cls: "warn", txt: "<b>Margin terpakai sudah " + marginPct.toFixed(1) + "% dari dompet.</b> Ruang untuk menahan gerakan lawan arah tinggal sedikit — pertimbangkan mengurangi posisi, bukan menambah." });
+        }
+        if (nearestLiq && nearestLiq.dist < 5){
+          warns.push({ cls: "danger", txt: "<b>Jarak likuidasi " + esc(nearestLiq.sym) + " tinggal " + nearestLiq.dist.toFixed(2) + "%.</b> Posisi ini sangat dekat ke likuidasi — putuskan sekarang: tambah margin, perkecil, atau tutup." });
+        }
+        if (r.dailyTarget > 0 && todayAll >= r.dailyTarget){
+          warns.push({ cls: "ok", txt: "<b>Target harian tercapai (" + signedMoney(todayAll) + ").</b> Patokan besok tetap sama: target +" + fmtMoney(r.dailyTarget) + " USDT dengan batas rugi −" + fmtMoney(r.dailyLossLimit) + " USDT. Berhenti saat target tercapai adalah bagian dari rencananya." });
+        }
+        if (!warns.length){
+          warns.push({ cls: "ok", txt: "Status risiko normal: PnL hari ini di dalam batas, leverage panel order di dalam batas versi kamu. Tetap pasang stop loss di setiap order." });
+        }
+        $("riskWarnings").innerHTML = warns.map(function(w){
+          return '<div class="risk-warn ' + w.cls + '">' + w.txt + "</div>";
+        }).join("");
+      }
+      function riskBlockReason(){
+        // Dipakai panel order: kembalikan alasan blokir, atau null bila aman.
+        // Memakai PnL bersih terburuk (hari ini vs jendela rolling 24 jam).
+        if (!state.connected) return null;
+        var r = state.risk;
+        var eff = effectivePnl();
+        if (r.dailyLossLimit > 0 && eff.effective <= -r.dailyLossLimit){
+          return "Diblokir manajemen risiko: PnL bersih terburuk " + signedMoney(eff.effective) + " (hari ini " + signedMoney(eff.today) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas rugi −" + fmtMoney(r.dailyLossLimit) + " USDT. Blokir lepas otomatis begitu untung baru mengangkat angka bersihnya, catatan rugi keluar dari jendela 24 jam, atau batasnya kamu naikkan di menu Risiko & Keuntungan.";
+        }
+        if (state.leverage > r.selfMaxLev){
+          return "Diblokir manajemen risiko: leverage " + state.leverage + "x melebihi batas versi kamu " + r.selfMaxLev + "x (di panel Manajemen Risiko). Turunkan leverage atau sesuaikan batasnya.";
+        }
+        return null;
       }
 
       /* ================= Batas leverage per pasangan (dari Binance) ================= */
@@ -2236,6 +2799,12 @@
           openApiModal();
           return;
         }
+        var riskBlock = riskBlockReason();
+        if (riskBlock){
+          setOrderMsg(riskBlock, "err");
+          addLog("Order ditolak manajemen risiko: " + riskBlock, "err");
+          return;
+        }
         var q = roundQty(currentQty());
         var p = refPrice();
         if (!q || q <= 0){ setOrderMsg("Isi jumlah order dulu (lebih dari 0).", "err"); return; }
@@ -2397,6 +2966,7 @@
         applyLevCap();
         state.usdtAvail = null; state.usdtWallet = null;
         state.positions = []; state.openOrders = [];
+        state.incomeDaily = {}; state.incomeRaw = []; state.incomeLoadedAt = 0;
         if (state.acctTimer){ clearInterval(state.acctTimer); state.acctTimer = null; }
         $("btnApi").textContent = "Hubungkan API Key";
         renderAccount();
@@ -2430,6 +3000,7 @@
           addLog("API key terhubung ke " + net().label + ". Saldo USDT tersedia: " + fmtMoney(state.usdtAvail) + ".", "ok");
           toast("Terhubung ke Binance " + net().label + ".", "ok");
           refreshAccount();
+          loadIncomeHistory(true);
           loadLevBrackets();
           if (state.acctTimer) clearInterval(state.acctTimer);
           state.acctTimer = setInterval(refreshAccount, 15000);
@@ -2445,6 +3016,29 @@
           errEl.textContent = "Gagal terhubung: " + e.message + hint;
           addLog("Gagal menghubungkan API key: " + e.message, "err");
         });
+      }
+
+      /* ================= Menu utama: ganti tampilan ================= */
+      function switchView(name){
+        state.view = name;
+        var isRisk = name === "risk";
+        $("viewTerminal").hidden = isRisk;
+        $("viewRisk").hidden = !isRisk;
+        $("navTerminal").classList.toggle("active", !isRisk);
+        $("navRisk").classList.toggle("active", isRisk);
+        // Panel order di HP menempel di bawah layar — sembunyikan di menu
+        // risiko supaya tidak menghalangi isi menu ini.
+        var op = $("orderPanel");
+        if (op) op.style.display = isRisk ? "none" : "";
+        var ob = $("orderBackdrop");
+        if (ob && isRisk) ob.classList.remove("show");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (isRisk){
+          if (state.connected) loadIncomeHistory(false);
+          renderPnlAndRisk();
+        } else {
+          drawChart();
+        }
       }
 
       /* ================= Wiring ================= */
@@ -2579,6 +3173,71 @@
           else toast("Belum terhubung — hubungkan API key dulu.");
         });
 
+        /* ---------- Menu utama ---------- */
+        $("navTerminal").addEventListener("click", function(){ switchView("terminal"); });
+        $("navRisk").addEventListener("click", function(){ switchView("risk"); });
+
+        /* ---------- Menu Risiko & Keuntungan ---------- */
+        $("btnRefreshPnl").addEventListener("click", function(){
+          if (!state.connected){ toast("Belum terhubung — hubungkan API key dulu."); return; }
+          loadIncomeHistory(true);
+          refreshAccount();
+        });
+        $("btnPnlMore").addEventListener("click", function(){
+          state.pnlExpanded = !state.pnlExpanded;
+          renderPnlAndRisk();
+        });
+        function bindRiskInput(id, key, min, fallback){
+          var el = $(id);
+          if (!el) return;
+          el.addEventListener("input", function(){
+            var v = parseFloat(el.value);
+            state.risk[key] = (!isNaN(v) && v >= min) ? v : fallback;
+            renderPnlAndRisk();
+            updateEstimates();
+          });
+        }
+        bindRiskInput("riskDailyLimit", "dailyLossLimit", 0, 0);
+        bindRiskInput("riskDailyTarget", "dailyTarget", 0, 0);
+        bindRiskInput("riskPerTrade", "perTradePct", 0, 0);
+        bindRiskInput("riskSelfMaxLev", "selfMaxLev", 1, 1);
+        $("btnCalcRisk").addEventListener("click", function(){
+          var entry = parseFloat($("calcEntry").value);
+          var sl = parseFloat($("calcSl").value);
+          var out = $("calcResult");
+          if (!state.connected || state.usdtWallet == null){
+            out.textContent = "Hubungkan API key dulu — anggaran risiko dihitung dari saldo dompet akun kamu.";
+            return;
+          }
+          if (!(entry > 0) || !(sl > 0) || entry === sl){
+            out.textContent = "Isi harga masuk dan harga stop loss yang berbeda dulu.";
+            return;
+          }
+          var riskAmt = state.usdtWallet * (state.risk.perTradePct / 100);
+          var dist = Math.abs(entry - sl);
+          var qty = roundQty(riskAmt / dist);
+          if (!(qty > 0)){
+            out.textContent = "Saldo / jarak SL menghasilkan jumlah di bawah minimum pasangan ini. Perkecil jarak SL atau naikkan risiko per trade dengan sadar.";
+            return;
+          }
+          var notional = qty * entry;
+          out.innerHTML = "Anggaran risiko: <b>" + fmtMoney(riskAmt) + " USDT</b> (" + state.risk.perTradePct + "% saldo) · Jarak SL: " + fmtPrice(dist) +
+            "<br>Jumlah aman: <b>" + qty + " " + esc(state.symbol.replace(/USDT$/, "")) + "</b> untuk " + esc(state.symbol) + " · Nilai posisi ≈ " + fmtMoney(notional) + " USDT" +
+            '<br><button type="button" class="btn btn-small" id="btnCalcApply" style="margin-top:8px">Pakai Jumlah Ini di Panel Order</button>';
+          var applyBtn = $("btnCalcApply");
+          if (applyBtn) applyBtn.addEventListener("click", function(){
+            $("qtyInput").value = qty;
+            var slEl = $("slInput"); if (slEl) slEl.value = sl;
+            switchView("terminal");
+            updateEstimates();
+            toast("Jumlah dari kalkulator risiko terisi di panel order (" + state.symbol + "). Periksa leverage & arah sebelum kirim.");
+            if (window.innerWidth <= 960){
+              var tgl = $("btnOrderToggle");
+              if (tgl && !$("orderPanel").classList.contains("open")) tgl.click();
+            }
+          });
+        });
+
         /* ---------- Interaksi grafik: zoom & geser ---------- */
         (function(){
           var pointers = {};
@@ -2673,6 +3332,7 @@
             drawChart();
           });
 
+          $("btnChartRefresh").addEventListener("click", function(){ refreshChart(); });
           $("btnZoomIn").addEventListener("click", function(){ zoomChartCenter(0.65); });
           $("btnZoomOut").addEventListener("click", function(){ zoomChartCenter(1.55); });
           $("btnZoomReset").addEventListener("click", function(){
