@@ -1,0 +1,2215 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Futures Ringan — Terminal Trading Binance Futures</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root{
+        --bg:#0b0e11; --panel:#12161d; --panel-2:#171d27; --input-bg:#0d1117;
+        --border:#242d3a; --border-soft:#1b222d;
+        --text:#eaecef; --muted:#8a94a3; --faint:#5f6b7a;
+        --green:#0ecb81; --green-dark:#0a9e65; --red:#f6465d; --red-dark:#d93a50;
+        --accent:#f0b90b; --accent-text:#181a20;
+        --warn-bg:#2a2110; --warn-border:#6b5410; --warn-text:#f5d67b;
+        --danger-bg:#2b1419; --danger-border:#7a2436; --danger-text:#ff97a7;
+        color-scheme:dark;
+      }
+      @media (prefers-color-scheme: light){
+        :root{
+          --bg:#eceef1; --panel:#ffffff; --panel-2:#f4f6f9; --input-bg:#f7f8fa;
+          --border:#d7dde6; --border-soft:#e3e8ef;
+          --text:#14181d; --muted:#5c6672; --faint:#8b95a3;
+          --accent:#c99400; --accent-text:#ffffff;
+          --warn-bg:#fdf6dd; --warn-border:#d9be55; --warn-text:#6d5410;
+          --danger-bg:#fdeef0; --danger-border:#e5a3ae; --danger-text:#a11f36;
+          color-scheme:light;
+        }
+      }
+      *{ box-sizing:border-box; }
+      html,body{ margin:0; padding:0; }
+      body{
+        background:var(--bg); color:var(--text);
+        font-family:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+        font-size:14px; line-height:1.45;
+        -webkit-font-smoothing:antialiased;
+      }
+      .mono{ font-family:"IBM Plex Mono", ui-monospace, SFMono-Regular, monospace; font-variant-numeric:tabular-nums; }
+      .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+      button, select, input{ font:inherit; color:inherit; }
+      button{ cursor:pointer; }
+      button:disabled{ cursor:not-allowed; opacity:.55; }
+      :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+
+      .app{ max-width:1460px; margin:0 auto; padding:10px; }
+
+      /* ---------- Top bar ---------- */
+      .topbar{
+        display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px;
+        background:var(--panel); border:1px solid var(--border); border-radius:10px;
+        padding:10px 14px;
+      }
+      .pair-block{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+      .pair-block select{
+        background:var(--input-bg); border:1px solid var(--border); border-radius:8px;
+        min-height:42px; padding:0 10px; font-weight:700; font-size:16px;
+      }
+      .pair-search{ position:relative; flex:1 1 190px; max-width:340px; }
+      .pair-search input{
+        width:100%; min-height:42px; padding:0 12px; border-radius:8px;
+        background:var(--input-bg); border:1px solid var(--border);
+        font-size:14px; color:var(--text);
+      }
+      .pair-search input:focus{ border-color:var(--accent); outline:none; }
+      .pair-search input::placeholder{ color:var(--faint); }
+      .pair-results{
+        position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:45;
+        background:var(--panel-2); border:1px solid var(--border); border-radius:10px;
+        max-height:330px; overflow-y:auto; box-shadow:0 14px 34px rgba(0,0,0,.45);
+        padding:4px;
+      }
+      .pair-hit{
+        display:flex; justify-content:space-between; align-items:baseline; gap:10px;
+        width:100%; text-align:left; background:transparent; border:0; border-radius:7px;
+        padding:10px 10px; min-height:44px; color:var(--text); font-weight:700; font-size:14px;
+      }
+      .pair-hit:hover, .pair-hit:active{ background:var(--panel); }
+      .pair-hit-base{ color:var(--faint); font-weight:500; font-size:12px; }
+      .pair-none{ padding:12px 10px; color:var(--muted); font-size:13px; }
+      .net-badge{
+        font-size:11px; font-weight:700; letter-spacing:.06em;
+        padding:4px 8px; border-radius:5px; background:var(--accent); color:var(--accent-text);
+        white-space:nowrap;
+      }
+      .net-badge.mainnet{ background:var(--red); color:#fff; }
+      .stats{ display:flex; flex-wrap:wrap; gap:8px 22px; flex:1 1 auto; min-width:260px; }
+      .stat{ display:flex; flex-direction:column; min-width:86px; }
+      .stat-label{ font-size:11px; color:var(--muted); }
+      .stat-value{ font-size:13px; font-weight:600; }
+      .stat.price .stat-value{ font-size:20px; font-weight:700; line-height:1.2; }
+      .up{ color:var(--green) !important; }
+      .down{ color:var(--red) !important; }
+      .conn{ display:flex; align-items:center; gap:10px; margin-left:auto; }
+      .conn-status{ font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+      .dot{ width:8px; height:8px; border-radius:50%; background:var(--faint); flex:none; }
+      .dot.live{ background:var(--green); }
+      .dot.poll{ background:var(--accent); }
+      .dot.off{ background:var(--red); }
+
+      .btn{
+        min-height:40px; padding:0 16px; border-radius:8px; border:1px solid var(--border);
+        background:var(--panel-2); font-weight:600;
+      }
+      .btn:hover{ border-color:var(--faint); }
+      .btn-accent{ background:var(--accent); border-color:var(--accent); color:var(--accent-text); }
+      .btn-accent:hover{ filter:brightness(1.07); border-color:var(--accent); }
+      .btn-danger{ background:var(--red); border-color:var(--red); color:#fff; }
+      .btn-ghost{ background:transparent; }
+      .btn-small{ min-height:36px; padding:0 12px; font-size:13px; }
+
+      /* ---------- Layout ---------- */
+      .layout{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px; align-items:start; }
+      .panel{ background:var(--panel); border:1px solid var(--border); border-radius:10px; }
+
+      /* ---------- Chart ---------- */
+      .chart-head{
+        display:flex; flex-wrap:wrap; align-items:center; gap:8px;
+        padding:10px 12px; border-bottom:1px solid var(--border-soft);
+      }
+      .chart-title{ font-weight:700; font-size:15px; margin-right:4px; }
+      .chart-price{ display:flex; align-items:baseline; gap:9px; margin-right:6px; }
+      .chart-price .cp-val{ font-size:23px; font-weight:700; line-height:1.1; }
+      .chart-change{ font-size:14px; font-weight:700; }
+      .chip-row{ display:flex; gap:6px; flex-wrap:wrap; }
+      .chip{
+        min-height:36px; padding:0 12px; border-radius:6px; border:1px solid var(--border);
+        background:transparent; color:var(--muted); font-weight:600; font-size:13px;
+      }
+      .chip.active{ color:var(--accent); border-color:var(--accent); }
+      .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+      .chart-wrap{ position:relative; height:460px; }
+      @media (max-width:960px){ .chart-wrap{ height:340px; } }
+      #chart{ width:100%; height:100%; display:block; }
+      .chart-msg{
+        position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+        text-align:center; padding:20px; color:var(--muted); font-size:14px;
+      }
+      .chart-msg.show{ display:flex; }
+      .ohlc{
+        display:flex; flex-wrap:wrap; gap:6px 16px; padding:8px 12px;
+        border-top:1px solid var(--border-soft); font-size:12px; color:var(--muted);
+      }
+      .ohlc b{ color:var(--text); font-weight:600; }
+
+      /* ---------- Order panel ---------- */
+      .order-panel{ padding:14px; }
+      .order-panel h2{ font-size:15px; margin:0 0 4px; }
+      .acct-line{ font-size:12.5px; color:var(--muted); margin-bottom:12px; }
+      .acct-line b{ color:var(--text); }
+      .order-grid{ display:grid; grid-template-columns:1fr; gap:0 22px; }
+      @media (min-width:961px){
+        .order-grid{ grid-template-columns:1fr 1fr; }
+        .order-col .trade-btns{ margin-top:2px; }
+      }
+      .field{ margin-bottom:12px; }
+      .field label{ display:block; font-size:12px; color:var(--muted); margin-bottom:5px; font-weight:500; }
+      .field input[type="text"], .field input[type="number"], .field input[type="password"]{
+        width:100%; min-height:42px; padding:0 10px; border-radius:7px;
+        background:var(--input-bg); border:1px solid var(--border);
+        font-family:"IBM Plex Mono", ui-monospace, monospace; font-size:14px;
+      }
+      .field input:focus{ border-color:var(--accent); outline:none; }
+      .input-suffix{ position:relative; }
+      .input-suffix span{
+        position:absolute; right:10px; top:50%; transform:translateY(-50%);
+        color:var(--faint); font-size:12px; pointer-events:none;
+      }
+      .lev-head{ display:flex; justify-content:space-between; align-items:baseline; }
+      .lev-value{ font-size:18px; font-weight:700; }
+      input[type="range"]{ width:100%; min-height:36px; accent-color:var(--accent); }
+      .seg{ display:flex; background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:3px; gap:3px; }
+      .seg button{
+        flex:1; min-height:38px; border:0; border-radius:6px; background:transparent;
+        font-weight:600; color:var(--muted);
+      }
+      .seg button.active{ background:var(--panel-2); color:var(--text); box-shadow:inset 0 0 0 1px var(--border); }
+      .pct-row{ display:flex; gap:6px; margin-top:6px; }
+      .pct-row button{
+        flex:1; min-height:36px; border-radius:6px; border:1px solid var(--border);
+        background:transparent; color:var(--muted); font-weight:600; font-size:12.5px;
+      }
+      .pct-row button:hover{ color:var(--text); border-color:var(--faint); }
+      .est-box{
+        background:var(--panel-2); border:1px solid var(--border-soft); border-radius:8px;
+        padding:10px 12px; font-size:12.5px; margin-bottom:12px;
+      }
+      .est-row{ display:flex; justify-content:space-between; gap:10px; padding:2px 0; }
+      .est-row span:first-child{ color:var(--muted); }
+      .est-row span:last-child{ font-weight:600; text-align:right; }
+      .tp-sl{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+      .trade-btns{ display:flex; gap:10px; margin-top:4px; }
+      .btn-long, .btn-short{
+        flex:1; min-height:56px; border:0; border-radius:8px; color:#fff;
+        font-size:16px; font-weight:700;
+      }
+      .btn-long{ background:var(--green); }
+      .btn-long:hover{ background:var(--green-dark); }
+      .btn-short{ background:var(--red); }
+      .btn-short:hover{ background:var(--red-dark); }
+      .order-msg{ font-size:12.5px; margin-top:10px; min-height:18px; }
+      .order-msg.err{ color:var(--red); }
+      .order-msg.ok{ color:var(--green); }
+      .cap-row{ display:flex; align-items:center; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border-soft); font-size:12.5px; color:var(--muted); }
+      .cap-row input{
+        width:96px; min-height:38px; padding:0 8px; border-radius:6px;
+        background:var(--input-bg); border:1px solid var(--border);
+        font-family:"IBM Plex Mono", ui-monospace, monospace;
+      }
+      .fineprint{ font-size:12px; color:var(--faint); margin-top:10px; }
+
+      /* ---------- Bottom panel ---------- */
+      .bottom-panel{ margin-top:10px; }
+      .tabs{ display:flex; gap:2px; border-bottom:1px solid var(--border); padding:0 8px; flex-wrap:wrap; }
+      .tab{
+        min-height:44px; padding:0 14px; border:0; background:transparent; color:var(--muted);
+        font-weight:600; border-bottom:2px solid transparent; margin-bottom:-1px;
+      }
+      .tab.active{ color:var(--text); border-bottom-color:var(--accent); }
+      .tab .count{ color:var(--accent); font-weight:700; }
+      .tab-body{ padding:12px 14px; }
+      .tab-tools{ display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+      .tab-tools .hint{ font-size:12px; color:var(--muted); }
+      .empty{ color:var(--muted); font-size:13.5px; padding:14px 4px; text-align:center; }
+      .pos-card{ border:1px solid var(--border-soft); border-radius:8px; padding:10px 12px; margin-bottom:8px; background:var(--panel-2); }
+      .pos-top{ display:flex; flex-wrap:wrap; align-items:center; gap:8px 14px; margin-bottom:6px; }
+      .pos-sym{ font-weight:700; font-size:15px; }
+      .side-tag{ font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; color:#fff; }
+      .side-tag.long{ background:var(--green); }
+      .side-tag.short{ background:var(--red); }
+      .pos-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:4px 16px; font-size:12.5px; }
+      .pos-grid .k{ color:var(--muted); display:block; font-size:11px; }
+      .pos-grid .v{ font-weight:600; }
+      .order-row{
+        display:flex; flex-wrap:wrap; gap:6px 16px; align-items:center;
+        border:1px solid var(--border-soft); border-radius:8px; padding:9px 12px; margin-bottom:8px;
+        background:var(--panel-2); font-size:13px;
+      }
+      .order-row .grow{ flex:1 1 auto; }
+      .log-list{ font-size:13px; }
+      .log-item{ display:flex; gap:10px; padding:7px 2px; border-bottom:1px solid var(--border-soft); align-items:baseline; }
+      .log-item:last-child{ border-bottom:0; }
+      .log-time{ color:var(--faint); font-size:12px; flex:none; }
+      .log-item.err .log-text{ color:var(--red); }
+      .log-item.ok .log-text{ color:var(--green); }
+
+      /* ---------- Alerts ---------- */
+      .alert{ border-radius:8px; padding:10px 12px; font-size:13px; margin-bottom:12px; border:1px solid; }
+      .alert-warn{ background:var(--warn-bg); border-color:var(--warn-border); color:var(--warn-text); }
+      .alert-danger{ background:var(--danger-bg); border-color:var(--danger-border); color:var(--danger-text); }
+
+      /* ---------- Modals ---------- */
+      .overlay{
+        position:fixed; inset:0; background:rgba(0,0,0,.62); display:none;
+        align-items:center; justify-content:center; padding:14px; z-index:50;
+      }
+      .overlay.open{ display:flex; }
+      .modal{
+        background:var(--panel); border:1px solid var(--border); border-radius:12px;
+        width:min(500px,100%); max-height:92vh; overflow:auto; padding:20px;
+      }
+      .modal h2{ margin:0 0 6px; font-size:17px; }
+      .modal .sub{ color:var(--muted); font-size:13px; margin-bottom:14px; }
+      .modal .actions{ display:flex; gap:10px; margin-top:16px; }
+      .modal .actions .btn{ flex:1; min-height:46px; }
+      .modal ul{ margin:8px 0; padding-left:18px; font-size:13px; color:var(--muted); }
+      .modal ul li{ margin-bottom:4px; }
+      .confirm-table{ width:100%; font-size:13.5px; border-collapse:collapse; }
+      .confirm-table td{ padding:6px 0; border-bottom:1px solid var(--border-soft); }
+      .confirm-table td:first-child{ color:var(--muted); }
+      .confirm-table td:last-child{ text-align:right; font-weight:600; }
+      .modal-err{ color:var(--red); font-size:13px; margin-top:10px; min-height:16px; }
+
+      /* ---------- Top gainers ---------- */
+      .gainers-panel{ margin-top:10px; padding:14px; }
+      .gainers-head{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:6px; }
+      .gainers-head h2{ font-size:15px; margin:0; }
+      .gainers-net{ font-size:11px; color:var(--muted); font-weight:600; margin-left:4px; }
+      .gainers-head .chip-row{ margin-left:auto; }
+      .gainer-row{
+        display:grid; grid-template-columns:30px 1fr auto auto 76px; gap:10px; align-items:center;
+        width:100%; text-align:left; background:transparent; border:0; border-bottom:1px solid var(--border-soft);
+        padding:9px 6px; min-height:44px; color:var(--text);
+      }
+      .gainer-row:last-child{ border-bottom:0; }
+      .gainer-row:hover{ background:var(--panel-2); }
+      .g-rank{ color:var(--faint); }
+      .g-sym{ font-weight:700; }
+      .g-price{ color:var(--muted); }
+      .g-chg{ font-weight:700; text-align:right; }
+      .g-vol{ color:var(--faint); text-align:right; font-size:12px; }
+      .gainers-note{ font-size:12px; color:var(--faint); margin:10px 0 0; }
+      @media (max-width:640px){
+        .gainer-row{ grid-template-columns:26px 1fr auto auto; }
+        .g-vol{ display:none; }
+        .gainers-head .chip-row{ margin-left:0; }
+      }
+
+      /* ---------- Diagnosis koneksi ---------- */
+      .diag-panel{ margin-top:10px; padding:14px; }
+      .diag-head{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
+      .diag-head h2{ font-size:15px; margin:0; flex:1; }
+      .diag-note{ font-size:12.5px; color:var(--muted); margin:0 0 8px; }
+      .diag-row{
+        display:flex; flex-wrap:wrap; gap:2px 12px; align-items:baseline;
+        padding:6px 2px; border-bottom:1px solid var(--border-soft); font-size:12.5px;
+      }
+      .diag-row:last-child{ border-bottom:0; }
+      .diag-host{ font-weight:600; }
+      .diag-kind{ color:var(--muted); }
+      .diag-status{ margin-left:auto; text-align:right; }
+      .diag-status.ok{ color:var(--green); font-weight:600; }
+      .diag-status.err{ color:var(--red); }
+
+      /* ---------- Toasts ---------- */
+      .toasts{ position:fixed; right:12px; bottom:12px; z-index:60; display:flex; flex-direction:column; gap:8px; max-width:min(360px, calc(100vw - 24px)); }
+      .toast{
+        background:var(--panel-2); border:1px solid var(--border); border-radius:8px;
+        padding:10px 14px; font-size:13px; box-shadow:0 8px 24px rgba(0,0,0,.35);
+      }
+      .toast.ok{ border-color:var(--green); }
+      .toast.err{ border-color:var(--red); }
+
+      .foot{ margin-top:12px; padding:12px 14px; font-size:12.5px; color:var(--muted); }      .foot p{ margin:0 0 6px; }
+      .foot p:last-child{ margin-bottom:0; }
+      @media (max-width:640px){
+        .conn{ width:100%; margin-left:0; flex-wrap:wrap; }
+        .conn-status{ flex:1 1 110px; }
+        #btnApi{ flex:1 1 auto; }
+        .topbar{ gap:8px 12px; padding:8px 10px; }
+        .pair-search{ flex:1 1 100%; max-width:none; order:-1; }
+        .stats{ gap:4px 14px; min-width:0; }
+        .stat{ min-width:70px; }
+        .stat.opt{ display:none; }
+        .stat.price .stat-value{ font-size:17px; }
+        .chart-price .cp-val{ font-size:20px; }
+      }
+      @media (prefers-reduced-motion: reduce){
+        *{ transition:none !important; animation:none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+
+      <!-- ======================= TOP BAR ======================= -->
+      <header class="topbar">
+        <div class="pair-block">
+          <div class="pair-search" id="pairSearchWrap">
+            <label class="sr-only" for="symbolSearch">Cari pasangan trading</label>
+            <input type="text" id="symbolSearch" class="mono" placeholder="Cari pasangan… mis. EVAA" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="search" />
+            <div class="pair-results" id="symbolResults" hidden></div>
+          </div>
+          <label class="sr-only" for="symbolSelect">Pasangan trading</label>
+          <select id="symbolSelect" class="mono"></select>
+          <span class="net-badge mainnet" id="netBadge">MAINNET</span>
+        </div>
+
+        <div class="stats" aria-live="off">
+          <div class="stat price">
+            <span class="stat-label">Harga terakhir</span>
+            <span class="stat-value mono" id="stPrice">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Perubahan 24j</span>
+            <span class="stat-value mono" id="stChange">—</span>
+          </div>
+          <div class="stat opt">
+            <span class="stat-label">Mark price</span>
+            <span class="stat-value mono" id="stMark">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Tertinggi 24j</span>
+            <span class="stat-value mono" id="stHigh">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Terendah 24j</span>
+            <span class="stat-value mono" id="stLow">—</span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Volume 24j (USDT)</span>
+            <span class="stat-value mono" id="stVol">—</span>
+          </div>
+          <div class="stat opt">
+            <span class="stat-label">Funding rate</span>
+            <span class="stat-value mono" id="stFunding">—</span>
+          </div>
+        </div>
+
+        <div class="conn">
+          <span class="conn-status"><span class="dot off" id="feedDot"></span><span id="feedText">Menghubungkan…</span></span>
+          <button class="btn btn-accent" id="btnApi" type="button">Hubungkan API Key</button>
+        </div>
+      </header>
+
+      <!-- Banner saat data futures tidak terjangkau dan tampilan memakai data spot cadangan -->
+      <div class="alert alert-warn" id="srcBanner" hidden style="margin-top:10px">
+        <b>Menampilkan harga SPOT (cadangan).</b> Semua alamat API Futures Mainnet Binance gagal dijangkau dari browser ini, jadi harga, grafik, dan top gainer diisi dari data spot publik Binance (data-api.binance.vision) supaya tetap terisi — harga spot bisa sedikit berbeda dari harga futures, dan mark price / funding rate tidak tersedia di mode ini. Pasangan futures-only yang tidak punya pasar spot (mis. EVAA) tidak bisa tampil di mode ini. Order tetap hanya dikirim ke API Futures. Rincian alamat mana yang gagal ada di panel Diagnosis Koneksi di bawah.
+      </div>
+
+      <!-- ======================= MAIN ======================= -->
+      <main class="layout">
+
+        <!-- Chart -->
+        <section class="panel" aria-label="Grafik harga">
+          <div class="chart-head">
+            <span class="chart-title mono" id="chartTitle">BTCUSDT Perpetual</span>
+            <span class="chart-price"><span class="cp-val mono" id="chPrice">—</span><span class="chart-change mono" id="chChange">—</span></span>
+            <div class="chip-row" id="intervalRow" role="group" aria-label="Interval grafik">
+              <button type="button" class="chip" data-iv="1m">1m</button>
+              <button type="button" class="chip" data-iv="5m">5m</button>
+              <button type="button" class="chip active" data-iv="15m">15m</button>
+              <button type="button" class="chip" data-iv="1h">1H</button>
+              <button type="button" class="chip" data-iv="4h">4H</button>
+              <button type="button" class="chip" data-iv="1d">1D</button>
+            </div>
+            <span class="chart-status"><span class="dot off" id="wsDot"></span><span id="wsText">Feed: —</span></span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="chart"></canvas>
+            <div class="chart-msg" id="chartMsg">Memuat data harga dari Binance…</div>
+          </div>
+          <div class="ohlc mono" id="ohlcBar">
+            <span>O <b id="ohO">—</b></span><span>H <b id="ohH">—</b></span>
+            <span>L <b id="ohL">—</b></span><span>C <b id="ohC">—</b></span>
+            <span>Vol <b id="ohV">—</b></span>
+          </div>
+        </section>
+
+        <!-- Order panel -->
+        <aside class="panel order-panel" aria-label="Panel order">
+          <h2>Buat Order</h2>
+          <div class="acct-line" id="acctLine">Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.</div>
+
+          <div class="order-grid">
+          <div class="order-col">
+          <div class="field">
+            <div class="lev-head">
+              <label for="levRange" style="margin:0">Leverage</label>
+              <span class="lev-value mono" id="levValue">10x</span>
+            </div>
+            <input type="range" id="levRange" min="1" max="50" step="1" value="10" />
+            <div class="pct-row" id="levChips">
+              <button type="button" data-lev="3">3x</button>
+              <button type="button" data-lev="5">5x</button>
+              <button type="button" data-lev="10">10x</button>
+              <button type="button" data-lev="20">20x</button>
+              <button type="button" data-lev="50">50x</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Tipe order</label>
+            <div class="seg" id="typeSeg">
+              <button type="button" data-type="MARKET" class="active">Market</button>
+              <button type="button" data-type="LIMIT">Limit</button>
+            </div>
+          </div>
+
+          <div class="field" id="limitPriceField" hidden>
+            <label for="limitPrice">Harga limit (USDT)</label>
+            <div class="input-suffix">
+              <input type="number" id="limitPrice" inputmode="decimal" min="0" step="any" placeholder="0.00" />
+              <span>USDT</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="qtyInput">Jumlah (<span id="qtyUnit">BTC</span>)</label>
+            <div class="input-suffix">
+              <input type="number" id="qtyInput" inputmode="decimal" min="0" step="any" placeholder="0.000" />
+              <span id="qtyUnit2">BTC</span>
+            </div>
+            <div class="pct-row" id="pctRow">
+              <button type="button" data-pct="25">25%</button>
+              <button type="button" data-pct="50">50%</button>
+              <button type="button" data-pct="75">75%</button>
+              <button type="button" data-pct="100">100%</button>
+            </div>
+          </div>
+
+          </div>
+          <div class="order-col">
+          <div class="tp-sl">
+            <div class="field">
+              <label for="tpInput">Take profit (opsional)</label>
+              <input type="number" id="tpInput" inputmode="decimal" min="0" step="any" placeholder="Harga TP" />
+            </div>
+            <div class="field">
+              <label for="slInput">Stop loss (opsional)</label>
+              <input type="number" id="slInput" inputmode="decimal" min="0" step="any" placeholder="Harga SL" />
+            </div>
+          </div>
+
+          <div class="est-box mono">
+            <div class="est-row"><span>Nilai order (perkiraan)</span><span id="estNotional">—</span></div>
+            <div class="est-row"><span>Margin dibutuhkan</span><span id="estMargin">—</span></div>
+            <div class="est-row"><span>Harga likuidasi (perkiraan kasar)</span><span id="estLiq">—</span></div>
+            <div class="est-row"><span>Saldo tersedia</span><span id="estAvail">—</span></div>
+          </div>
+
+          <div class="trade-btns">
+            <button type="button" class="btn-long" id="btnLong">Long / Beli</button>
+            <button type="button" class="btn-short" id="btnShort">Short / Jual</button>
+          </div>
+          <div class="order-msg" id="orderMsg" role="status"></div>
+
+          </div>
+          </div>
+          <div class="cap-row">
+            <label for="capInput">Batas maks. nilai 1 order</label>
+            <input type="number" id="capInput" class="mono" min="10" step="10" value="250" />
+            <span>USDT</span>
+          </div>
+          <p class="fineprint">Order di atas batas ini ditolak halaman ini sebelum dikirim. Mode margin (cross/isolated) mengikuti pengaturan akun Binance kamu. TP/SL dikirim sebagai order penutup (closePosition) setelah order utama masuk.</p>
+        </aside>
+      </main>
+
+      <!-- ======================= TOP GAINERS ======================= -->
+      <section class="panel gainers-panel" aria-label="Top gainer futures">
+        <div class="gainers-head">
+          <h2>Top Gainer Futures <span class="gainers-net">Mainnet · USDT Perpetual</span></h2>
+          <div class="chip-row" id="gainerRangeRow" role="group" aria-label="Rentang waktu top gainer">
+            <button type="button" class="chip" data-range="5m">5m</button>
+            <button type="button" class="chip" data-range="15m">15m</button>
+            <button type="button" class="chip" data-range="1h">1j</button>
+            <button type="button" class="chip" data-range="2h">2j</button>
+            <button type="button" class="chip" data-range="4h">4j</button>
+            <button type="button" class="chip" data-range="6h">6j</button>
+            <button type="button" class="chip" data-range="12h">12j</button>
+            <button type="button" class="chip active" data-range="24h">24j</button>
+          </div>
+          <button type="button" class="btn btn-small" id="btnGainersRefresh">Muat Ulang</button>
+        </div>
+        <div id="gainersBody"><div class="empty">Memuat daftar top gainer…</div></div>
+        <p class="gainers-note" id="gainersNote"></p>
+      </section>
+
+      <!-- ======================= BOTTOM ======================= -->
+      <section class="panel bottom-panel" aria-label="Posisi dan order">
+        <div class="tabs" role="tablist">
+          <button type="button" class="tab active" data-tab="positions" role="tab">Posisi <span class="count" id="posCount"></span></button>
+          <button type="button" class="tab" data-tab="orders" role="tab">Order Terbuka <span class="count" id="ordCount"></span></button>
+          <button type="button" class="tab" data-tab="log" role="tab">Riwayat Sesi</button>
+        </div>
+
+        <div class="tab-body" id="tab-positions">
+          <div class="tab-tools">
+            <button type="button" class="btn btn-small" id="btnRefreshAcct">Muat Ulang</button>
+            <span class="hint">Posisi &amp; saldo dimuat langsung dari akun Binance kamu saat terhubung, dan diperbarui tiap 15 detik.</span>
+          </div>
+          <div id="posList"><div class="empty">Belum terhubung — hubungkan API key untuk melihat posisi dari akun Binance kamu.</div></div>
+        </div>
+
+        <div class="tab-body" id="tab-orders" hidden>
+          <div id="ordList"><div class="empty">Belum terhubung — hubungkan API key untuk melihat order terbuka.</div></div>
+        </div>
+
+        <div class="tab-body" id="tab-log" hidden>
+          <div class="log-list" id="logList"><div class="empty">Belum ada aktivitas di sesi ini.</div></div>
+        </div>
+      </section>
+
+      <!-- ======================= DIAGNOSIS KONEKSI ======================= -->
+      <section class="panel diag-panel" aria-label="Diagnosis koneksi">
+        <div class="diag-head">
+          <h2>Diagnosis Koneksi</h2>
+          <button type="button" class="btn btn-small" id="btnDiag">Tes Ulang</button>
+        </div>
+        <p class="diag-note">Hasil tes langsung dari browser kamu ke tiap alamat data Binance, diperbarui setiap ada permintaan data. <b>“Failed to fetch”</b> berarti alamat itu tidak terjangkau dari browser/jaringan ini — diblokir jaringan atau tidak mengizinkan akses lintas-origin (CORS) — <b>bukan</b> karena kamu belum login: harga dan grafik adalah data publik yang tidak butuh API key. Aplikasi Binance bisa tetap berfungsi karena memakai jalur koneksinya sendiri di luar browser.</p>
+        <div id="diagList"><div class="empty">Mengetes koneksi…</div></div>
+      </section>
+
+      <footer class="panel foot">
+        <p><b>Cara kerja halaman ini:</b> harga dan grafik selalu diambil dari API publik <b>Futures Mainnet</b> Binance (fapi.binance.com, lalu cadangan fapi1–fapi4) — pasar aslinya — dan <b>order serta data akun</b> juga dikirim ke Futures Mainnet. Alamat www.binance.com/fapi tidak dipakai — dari browser di luar situs Binance alamat itu tidak melayani data futures dan tidak memberi izin lintas-origin, jadi fetch selalu gagal. Kalau semua alamat futures tetap tidak terjangkau dari browser kamu, halaman otomatis menampilkan harga &amp; grafik SPOT Binance dari data-api.binance.vision sebagai cadangan, selalu diberi label “SPOT (cadangan)” — kecuali pasangan futures-only yang memang tidak punya pasar spot, yang grafiknya hanya bisa tampil saat API Futures terjangkau; panel Diagnosis Koneksi di atas menunjukkan alamat mana yang terjangkau dan mana yang gagal dari browser kamu. Daftar pasangan di pemilih adalah daftar lengkap perpetual USDT (570 pasangan) yang tertanam di dalam halaman ini — dibekukan dari data Binance Futures per 19 November 2026 dan termasuk EVAAUSDT — jadi tetap lengkap dan bisa dicari lewat kotak pencarian walau semua API Binance gagal; simbol yang lebih baru ditambahkan otomatis saat exchangeInfo futures terjangkau. Order ditandatangani di browser kamu dan dikirim langsung dari browser ke Binance — tidak lewat server lain. API key hanya disimpan di memori halaman selama halaman terbuka; key hilang begitu halaman ditutup atau dimuat ulang, dan tidak pernah dikirim ke siapa pun selain Binance.</p>
+        <p><b>Risiko:</b> trading futures berleverage bisa menghapus seluruh margin kamu dalam hitungan menit. Halaman ini hanya terhubung ke Mainnet — semua order memakai uang asli. Mulai dari nominal kecil dan leverage rendah, dan jangan pernah memakai key dengan izin withdraw.</p>
+      </footer>
+    </div>
+
+    <!-- ======================= API MODAL ======================= -->
+    <div class="overlay" id="apiModal" role="dialog" aria-modal="true" aria-labelledby="apiTitle">
+      <div class="modal">
+        <h2 id="apiTitle">Hubungkan API Key Binance</h2>
+        <p class="sub">Jaringan: <b id="apiNetLabel">MAINNET — uang asli</b>. Key diketik di sini, di perangkat kamu — bukan lewat chat — dan hanya disimpan di memori halaman ini.</p>
+
+        <div class="alert alert-warn">
+          Atur key kamu di Binance seperti ini sebelum memakai Mainnet:
+          <ul>
+            <li>Aktifkan <b>hanya</b> izin Futures / kontrak.</li>
+            <li><b>Matikan izin withdraw</b> — halaman ini tidak pernah butuh withdraw.</li>
+            <li>Kalau bisa, batasi key ke alamat IP kamu.</li>
+          </ul>
+        </div>
+
+        <div class="field">
+          <label for="apiKeyInput">API Key</label>
+          <input type="password" id="apiKeyInput" autocomplete="off" spellcheck="false" placeholder="Tempel API key kamu" />
+        </div>
+        <div class="field">
+          <label for="apiSecretInput">Secret Key</label>
+          <input type="password" id="apiSecretInput" autocomplete="off" spellcheck="false" placeholder="Tempel secret key kamu" />
+        </div>
+        <div class="modal-err" id="apiErr"></div>
+        <div class="actions">
+          <button type="button" class="btn" id="btnApiCancel">Batal</button>
+          <button type="button" class="btn btn-danger" id="btnDisconnect" hidden>Putuskan</button>
+          <button type="button" class="btn btn-accent" id="btnConnect">Hubungkan</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ======================= CONFIRM MODAL ======================= -->
+    <div class="overlay" id="confirmModal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="modal">
+        <h2 id="confirmTitle">Konfirmasi Order</h2>
+        <p class="sub" id="confirmSub">Periksa lagi sebelum dikirim ke Binance.</p>
+        <div id="confirmAlert"></div>
+        <table class="confirm-table" id="confirmTable"></table>
+        <div class="modal-err" id="confirmErr"></div>
+        <div class="actions">
+          <button type="button" class="btn" id="btnConfirmCancel">Batal</button>
+          <button type="button" class="btn btn-accent" id="btnConfirmSend">Kirim Order</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toasts" id="toasts" aria-live="polite"></div>
+
+    <script>
+    (function(){
+      "use strict";
+
+      /* ================= Networks & state ================= */
+      var NETWORKS = {
+        mainnet: {
+          // fapi.binance.com adalah jalur utama: API futures resmi ini mengirim
+          // izin CORS untuk fetch dari browser. www.binance.com/fapi TIDAK dipakai:
+          // dari browser di luar situs Binance alamat itu tidak melayani data
+          // futures (balasan 404, tanpa header CORS), jadi fetch selalu gagal
+          // dengan "Failed to fetch" walaupun jaringan sehat.
+          restHosts: ["https://fapi.binance.com", "https://fapi1.binance.com", "https://fapi2.binance.com", "https://fapi3.binance.com", "https://fapi4.binance.com"],
+          ws: "wss://fstream.binance.com", label: "MAINNET"
+        }
+      };
+      // Pasangan populer untuk grup atas dropdown. Daftar lengkapnya adalah
+      // STATIC_SYMBOLS di bawah (tertanam di halaman, tidak bergantung API).
+      var POPULAR = ["BTCUSDT","ETHUSDT","BNBUSDT","SOLUSDT","XRPUSDT","DOGEUSDT","ADAUSDT","LINKUSDT","LTCUSDT","BCHUSDT","AVAXUSDT","DOTUSDT","TRXUSDT","NEARUSDT","ATOMUSDT","ETCUSDT","XLMUSDT","FILUSDT","UNIUSDT","AAVEUSDT","ARBUSDT","OPUSDT","SUIUSDT","APTUSDT","INJUSDT","SEIUSDT","TIAUSDT","WIFUSDT","FETUSDT","ONDOUSDT","ENAUSDT","HBARUSDT","RENDERUSDT","1000PEPEUSDT","PIEVERSEUSDT"];
+
+      // Daftar LENGKAP pasangan USDT perpetual futures, tertanam statis di halaman ini
+      // (dibekukan 19 Nov 2026 dari exchangeInfo Binance Futures Mainnet,
+      // ditambah EVAAUSDT yang terverifikasi ada di arsip data
+      // publik futures mainnet Binance). Pemilih pasangan TIDAK lagi bergantung pada
+      // exchangeInfo API: daftar ini selalu lengkap dan bisa dicari walau semua API
+      // Binance gagal dari browser pengguna. Simbol live yang lebih baru ditambahkan
+      // otomatis saat exchangeInfo futures terjangkau.
+      var STATIC_SYMBOLS = [
+        "0GUSDT","1000000BOBUSDT","1000000MOGUSDT","1000BONKUSDT","1000CATUSDT","1000CHEEMSUSDT","1000FLOKIUSDT","1000LUNCUSDT","1000PEPEUSDT","1000RATSUSDT",
+        "1000SATSUSDT","1000SHIBUSDT","1000WHYUSDT","1000XECUSDT","1000XUSDT","1INCHUSDT","1MBABYDOGEUSDT","2ZUSDT","42USDT","4USDT",
+        "AAVEUSDT","ABCCCUSDT","ACEUSDT","ACHUSDT","ACTUSDT","ACUUSDT","ACXUSDT","ADAUSDT","AEROUSDT","AEVOUSDT",
+        "AGLDUSDT","AGTUSDT","AIAUSDT","AINUSDT","AIOTUSDT","AIOUSDT","AIUSDT","AIXBTUSDT","AKEUSDT","AKTUSDT",
+        "ALCHUSDT","ALGOUSDT","ALICEUSDT","ALLOUSDT","ALLUSDT","ALPACAUSDT","ALPINEUSDT","ALTUSDT","ANIMEUSDT","ANKRUSDT",
+        "APEUSDT","API3USDT","APRUSDT","APTUSDT","ARBUSDT","ARCUSDT","ARIAUSDT","ARKMUSDT","ARKUSDT","ARPAUSDT",
+        "ARUSDT","ASRUSDT","ASTERUSDT","ASTRUSDT","ATAUSDT","ATHUSDT","ATOMUSDT","ATUSDT","AUCTIONUSDT","AUSDT",
+        "AVAAIUSDT","AVAUSDT","AVAXUSDT","AVNTUSDT","AWEUSDT","AXLUSDT","AXSUSDT","AZTECUSDT","B2USDT","BABYUSDT",
+        "BALUSDT","BANANAS31USDT","BANANAUSDT","BANDUSDT","BANKUSDT","BANUSDT","BARDUSDT","BASUSDT","BATUSDT","BBUSDT",
+        "BCHUSDT","BEAMXUSDT","BEATUSDT","BELUSDT","BERAUSDT","BICOUSDT","BIDUSDT","BIGTIMEUSDT","BIOUSDT","BIRBUSDT",
+        "BLESSUSDT","BLUAIUSDT","BLURUSDT","BMTUSDT","BNBUSDT","BNTUSDT","BNXUSDT","BOBUSDT","BOMEUSDT","BONDUSDT",
+        "BRETTUSDT","BREVUSDT","BROCCOLI714USDT","BROCCOLIF3BUSDT","BRUSDT","BSBUSDT","BSVUSDT","BTCDOMUSDT","BTCSTUSDT","BTCUSDT",
+        "BTRUSDT","BULLAUSDT","BUSDT","C98USDT","CAKEUSDT","CARVUSDT","CATIUSDT","CCUSDT","CELOUSDT","CELRUSDT",
+        "CETUSUSDT","CFXUSDT","CGPTUSDT","CHESSUSDT","CHILLGUYUSDT","CHRUSDT","CHZUSDT","CKBUSDT","CLANKERUSDT","CLOUSDT",
+        "COAIUSDT","COLLECTUSDT","COMBOUSDT","COMMONUSDT","COMPUSDT","COOKIEUSDT","COSUSDT","COTIUSDT","COWUSDT","CROSSUSDT",
+        "CRVUSDT","CTSIUSDT","CUDISUSDT","CUSDT","CYBERUSDT","CYSUSDT","DAMUSDT","DASHUSDT","DEEPUSDT","DEFIUSDT",
+        "DEGENUSDT","DENTUSDT","DEXEUSDT","DFUSDT","DIAUSDT","DMCUSDT","DODOXUSDT","DOGEUSDT","DOGSUSDT","DOLOUSDT",
+        "DOODUSDT","DOTUSDT","DRIFTUSDT","DUSDT","DUSKUSDT","DYDXUSDT","DYMUSDT","EDENUSDT","EDGEUSDT","EDUUSDT",
+        "EGLDUSDT","EIGENUSDT","ELSAUSDT","ENAUSDT","ENJUSDT","ENSOUSDT","ENSUSDT","EPICUSDT","EPTUSDT","ERAUSDT",
+        "ESPORTSUSDT","ESPUSDT","ETCUSDT","ETHFIUSDT","ETHUSDT","ETHWUSDT","EULUSDT","EVAAUSDT","FARTCOINUSDT","FETUSDT",
+        "FFUSDT","FHEUSDT","FIDAUSDT","FIGHTUSDT","FILUSDT","FIOUSDT","FISUSDT","FLOCKUSDT","FLOWUSDT","FLUIDUSDT",
+        "FLUXUSDT","FOGOUSDT","FOLKSUSDT","FORMUSDT","FORTHUSDT","FRAXUSDT","FUNUSDT","FUSDT","FXSUSDT","GAIBUSDT",
+        "GALAUSDT","GASUSDT","GHSTUSDT","GIGGLEUSDT","GLMUSDT","GMTUSDT","GMXUSDT","GOATUSDT","GPSUSDT","GRASSUSDT",
+        "GRIFFAINUSDT","GRTUSDT","GTCUSDT","GUAUSDT","GUNUSDT","GUSDT","GWEIUSDT","HAEDALUSDT","HANAUSDT","HBARUSDT",
+        "HEIUSDT","HEMIUSDT","HFTUSDT","HIGHUSDT","HIPPOUSDT","HIVEUSDT","HMSTRUSDT","HOLOUSDT","HOMEUSDT","HOOKUSDT",
+        "HOTUSDT","HUMAUSDT","HUSDT","HYPERUSDT","HYPEUSDT","ICNTUSDT","ICXUSDT","IDOLUSDT","IDUSDT","ILVUSDT",
+        "IMXUSDT","INITUSDT","INJUSDT","INUSDT","INXUSDT","IOSTUSDT","IOTAUSDT","IOTXUSDT","IOUSDT","IPUSDT",
+        "IRUSDT","JASMYUSDT","JCTUSDT","JELLYJELLYUSDT","JOEUSDT","JSTUSDT","JTOUSDT","JUPUSDT","KAIAUSDT","KAITOUSDT",
+        "KASUSDT","KATUSDT","KAVAUSDT","KERNELUSDT","KGENUSDT","KITEUSDT","KMNOUSDT","KNCUSDT","KOMAUSDT","KSMUSDT",
+        "LABUSDT","LAUSDT","LAYERUSDT","LDOUSDT","LIGHTUSDT","LINAUSDT","LINEAUSDT","LINKUSDT","LISTAUSDT","LOOMUSDT",
+        "LPTUSDT","LQTYUSDT","LRCUSDT","LSKUSDT","LTCUSDT","LUMIAUSDT","LUNA2USDT","LYNUSDT","MAGICUSDT","MAGMAUSDT",
+        "MANAUSDT","MANTAUSDT","MANTRAUSDT","MASKUSDT","MAVUSDT","MBOXUSDT","MEGAUSDT","MELANIAUSDT","MEMEUSDT","MERLUSDT",
+        "METISUSDT","METUSDT","MEUSDT","MEWUSDT","MILKUSDT","MINAUSDT","MIRAUSDT","MITOUSDT","MLNUSDT","MMTUSDT",
+        "MOCAUSDT","MONUSDT","MOODENGUSDT","MORPHOUSDT","MOVEUSDT","MOVRUSDT","MTLUSDT","MUBARAKUSDT","MUSDT","MYROUSDT",
+        "MYXUSDT","NAORISUSDT","NEARUSDT","NEIROUSDT","NEOUSDT","NEWTUSDT","NIGHTUSDT","NILUSDT","NMRUSDT","NOMUSDT",
+        "NOTUSDT","NTRNUSDT","NULSUSDT","NXPCUSDT","OBOLUSDT","OGNUSDT","OGUSDT","OMGUSDT","OMUSDT","ONDOUSDT",
+        "ONEUSDT","ONGUSDT","ONTUSDT","ONUSDT","OPUSDT","ORBSUSDT","ORCAUSDT","ORDERUSDT","ORDIUSDT","PARTIUSDT",
+        "PAXGUSDT","PENDLEUSDT","PENGUUSDT","PEOPLEUSDT","PHAUSDT","PHBUSDT","PIEVERSEUSDT","PIPPINUSDT","PIXELUSDT","PLAYUSDT",
+        "PLUMEUSDT","PNUTUSDT","POLUSDT","POLYXUSDT","PONKEUSDT","POPCATUSDT","PORT3USDT","PORTALUSDT","POWERUSDT","POWRUSDT",
+        "PROMPTUSDT","PROMUSDT","PROVEUSDT","PTBUSDT","PUFFERUSDT","PUMPBTCUSDT","PUNDIXUSDT","PYTHUSDT","QNTUSDT","QTUMUSDT",
+        "QUICKUSDT","QUSDT","RAREUSDT","RAVEUSDT","RAYSOLUSDT","RDNTUSDT","RECALLUSDT","REDUSDT","REIUSDT","RENDERUSDT",
+        "RESOLVUSDT","REZUSDT","RIFUSDT","RIVERUSDT","RLCUSDT","ROBOUSDT","RONINUSDT","ROSEUSDT","RPLUSDT","RSRUSDT",
+        "RUNEUSDT","RVNUSDT","RVVUSDT","SAFEUSDT","SAGAUSDT","SAHARAUSDT","SANDUSDT","SANTOSUSDT","SAPIENUSDT","SCRTUSDT",
+        "SCRUSDT","SEIUSDT","SENTUSDT","SFPUSDT","SHELLUSDT","SIGNUSDT","SIRENUSDT","SKATEUSDT","SKLUSDT","SKRUSDT",
+        "SKYAIUSDT","SKYUSDT","SLERFUSDT","SLPUSDT","SNXUSDT","SOLUSDT","SOLVUSDT","SONICUSDT","SOONUSDT","SOPHUSDT",
+        "SPACEUSDT","SPELLUSDT","SPKUSDT","SPORTFUNUSDT","SPXUSDT","SQDUSDT","SSVUSDT","STABLEUSDT","STBLUSDT","STEEMUSDT",
+        "STGUSDT","STMXUSDT","STORJUSDT","STOUSDT","STRKUSDT","STXUSDT","SUIUSDT","SUNUSDT","SUPERUSDT","SUSDT",
+        "SUSHIUSDT","SWARMSUSDT","SWELLUSDT","SXPUSDT","SXTUSDT","SYNUSDT","SYRUPUSDT","SYSUSDT","TACUSDT","TAGUSDT",
+        "TAIKOUSDT","TAKEUSDT","TAOUSDT","TAUSDT","THETAUSDT","THEUSDT","TIAUSDT","TNSRUSDT","TOKENUSDT","TONUSDT",
+        "TOSHIUSDT","TOWNSUSDT","TRADOORUSDT","TRBUSDT","TREEUSDT","TRIAUSDT","TROYUSDT","TRUMPUSDT","TRUSTUSDT","TRUTHUSDT",
+        "TRUUSDT","TRXUSDT","TSTUSDT","TURBOUSDT","TURTLEUSDT","TUSDT","TUTUSDT","TWTUSDT","UAIUSDT","UBUSDT",
+        "UMAUSDT","UNIUSDT","USDCUSDT","USELESSUSDT","USTCUSDT","USUALUSDT","USUSDT","VANAUSDT","VANRYUSDT","VELODROMEUSDT",
+        "VELVETUSDT","VETUSDT","VFYUSDT","VICUSDT","VIDTUSDT","VINEUSDT","VIRTUALUSDT","VOXELUSDT","VTHOUSDT","VVVUSDT",
+        "WALUSDT","WAXPUSDT","WCTUSDT","WETUSDT","WIFUSDT","WLDUSDT","WLFIUSDT","WOOUSDT","WUSDT","XAIUSDT",
+        "XANUSDT","XEMUSDT","XLMUSDT","XMRUSDT","XNYUSDT","XPINUSDT","XPLUSDT","XRPUSDT","XTZUSDT","XVGUSDT",
+        "XVSUSDT","YALAUSDT","YBUSDT","YFIUSDT","YGGUSDT","ZAMAUSDT","ZBTUSDT","ZECUSDT","ZENUSDT","ZEREBROUSDT",
+        "ZETAUSDT","ZILUSDT","ZKCUSDT","ZKJUSDT","ZKPUSDT","ZKUSDT","ZORAUSDT","ZRCUSDT","ZROUSDT","ZRXUSDT"
+      ];
+
+      var state = {
+        network: "mainnet",
+        symbol: "BTCUSDT",
+        interval: "15m",
+        keys: null,              // {apiKey, secret} — memory only, never persisted
+        timeOffset: 0,
+        connected: false,
+        connecting: false,
+        leverage: 10,
+        orderType: "MARKET",
+        lastPrice: null,
+        markPrice: null,
+        klines: [],
+        symbolInfo: {},          // symbol -> {stepSize, qtyDecimals, minQty, tickDecimals}
+        usdtAvail: null,
+        usdtWallet: null,
+        positions: [],
+        openOrders: [],
+        ws: null,
+        wsAlive: false,
+        pollTimer: null,
+        acctTimer: null,
+        confirmAction: null,
+        hostIdx: { mainnet: 0 },
+        allSymbols: STATIC_SYMBOLS.slice(),
+        mainnetPerps: null,
+        gainerRange: "24h",
+        gainersCache: {},
+        dataSource: "futures",   // "futures" | "spot" — sumber data harga/grafik yang sedang tampil
+        futuresDownUntil: 0,     // selama timestamp ini, futures dianggap tak terjangkau (langsung pakai spot)
+        spotHostIdx: 0,
+        symbolsFromSpot: false
+      };
+
+      function $(id){ return document.getElementById(id); }
+      function net(){ return NETWORKS[state.network]; }
+
+      /* ================= Formatting ================= */
+      function priceDecimals(p){
+        if (p == null || isNaN(p)) return 2;
+        p = Math.abs(p);
+        if (p >= 100) return 2;
+        if (p >= 1) return 3;
+        if (p >= 0.1) return 4;
+        if (p >= 0.01) return 5;
+        return 6;
+      }
+      function fmtPrice(p){
+        if (p == null || isNaN(p)) return "—";
+        var d = priceDecimals(p);
+        return Number(p).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
+      }
+      function fmtMoney(n){
+        if (n == null || isNaN(n)) return "—";
+        return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function fmtCompact(n){
+        if (n == null || isNaN(n)) return "—";
+        if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(2) + "B";
+        if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(2) + "M";
+        if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(2) + "K";
+        return n.toFixed(2);
+      }
+      function nowTime(){
+        return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+      function esc(s){
+        return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+          return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+        });
+      }
+
+      /* ================= Log & toast ================= */
+      var logEntries = [];
+      function addLog(text, kind){
+        logEntries.unshift({ t: nowTime(), text: text, kind: kind || "" });
+        if (logEntries.length > 80) logEntries.pop();
+        renderLog();
+      }
+      function renderLog(){
+        var el = $("logList");
+        if (!logEntries.length){
+          el.innerHTML = '<div class="empty">Belum ada aktivitas di sesi ini.</div>';
+          return;
+        }
+        el.innerHTML = logEntries.map(function(e){
+          return '<div class="log-item ' + esc(e.kind) + '"><span class="log-time mono">' + esc(e.t) +
+                 '</span><span class="log-text">' + esc(e.text) + "</span></div>";
+        }).join("");
+      }
+      function toast(text, kind){
+        var box = $("toasts");
+        var d = document.createElement("div");
+        d.className = "toast" + (kind ? " " + kind : "");
+        d.textContent = text;
+        box.appendChild(d);
+        setTimeout(function(){ if (d.parentNode) d.parentNode.removeChild(d); }, 6000);
+      }
+
+      /* ================= Public REST (multi-endpoint, failover otomatis) ================= */
+      function fetchWithTimeout(url, opts, ms){
+        var o = opts || {};
+        var ctrl = ("AbortController" in window) ? new AbortController() : null;
+        var timer = null;
+        if (ctrl){
+          o.signal = ctrl.signal;
+          timer = setTimeout(function(){ ctrl.abort(); }, ms || 10000);
+        }
+        return fetch(url, o).then(function(res){
+          if (timer) clearTimeout(timer);
+          return res;
+        }, function(e){
+          if (timer) clearTimeout(timer);
+          throw e;
+        });
+      }
+      function fetchJsonFrom(base, path){
+        return fetchWithTimeout(base + path, {}, 8000).then(function(r){
+          if (!r.ok){
+            // Baca pesan error ASLI dari Binance (mis. {"code":-1121,
+            // "msg":"Invalid symbol."}) supaya penyebab sebenarnya tampil —
+            // bukan tebakan generik. Error HTTP (simbol tidak ada, dsb.)
+            // BUKAN kegagalan jaringan dan tidak boleh diperlakukan sama.
+            return r.json().catch(function(){ return null; }).then(function(body){
+              var bmsg = body && body.msg ? String(body.msg) : "";
+              var err = new Error("HTTP " + r.status +
+                (r.status === 451 ? " — Binance membatasi akses API dari wilayah/jaringan ini" : "") +
+                (bmsg ? " — " + bmsg : ""));
+              err.status = r.status;
+              err.code = body && body.code != null ? body.code : null;
+              err.binanceMsg = bmsg;
+              throw err;
+            });
+          }
+          return r.json();
+        });
+      }
+      // Kegagalan JARINGAN (fetch ditolak browser: "Failed to fetch", DNS,
+      // CORS, timeout) tidak membawa status HTTP. Error HTTP dari Binance
+      // (400 Invalid symbol, 451, dst.) membawa .status — bedakan keduanya:
+      // hanya kegagalan jaringan yang memicu cadangan spot & jeda futures.
+      function isNetworkError(e){
+        return !(e && e.status);
+      }
+      // Catatan hasil terakhir tiap host — ditampilkan apa adanya di panel
+      // Diagnosis Koneksi supaya pengguna bisa melihat host mana yang gagal.
+      var hostDiag = {}; // host -> { ok, msg, at }
+      function noteHost(host, ok, msg){
+        hostDiag[host] = { ok: !!ok, msg: msg || "", at: Date.now() };
+        renderDiagList();
+      }
+      // Coba daftar host satu per satu (mulai dari yang terakhir berhasil)
+      // sampai ada yang menjawab. Tiap hasil dicatat untuk diagnosis.
+      function tryHostList(hosts, startIdx, path, onPick){
+        var order = [];
+        for (var i = 0; i < hosts.length; i++) order.push((startIdx + i) % hosts.length);
+        var p = Promise.reject(new Error("belum dicoba"));
+        order.forEach(function(hi){
+          p = p.catch(function(){
+            return fetchJsonFrom(hosts[hi], path).then(function(data){
+              noteHost(hosts[hi], true, "OK");
+              if (onPick) onPick(hi);
+              return data;
+            }, function(e){
+              noteHost(hosts[hi], false, e && e.message ? e.message : "Failed to fetch");
+              throw e;
+            });
+          });
+        });
+        return p;
+      }
+      function tryHosts(nwKey, path){
+        return tryHostList(NETWORKS[nwKey].restHosts, state.hostIdx[nwKey] || 0, path, function(hi){
+          if (state.hostIdx[nwKey] !== hi){
+            state.hostIdx[nwKey] = hi;
+            addLog("Terhubung ke Binance lewat alamat API " + NETWORKS[nwKey].restHosts[hi].replace("https://", "") + ".", "");
+          }
+        });
+      }
+      // Jalur data publik cadangan yang ramah browser: Binance Vision memang
+      // dibuat untuk di-fetch lintas-origin (Access-Control-Allow-Origin: *).
+      // Dipakai HANYA untuk tampilan harga/grafik/gainer saat semua alamat
+      // futures gagal — datanya harga SPOT dan selalu diberi label cadangan.
+      var SPOT_HOSTS = ["https://data-api.binance.vision", "https://api.binance.com", "https://api1.binance.com", "https://api2.binance.com", "https://api3.binance.com", "https://api4.binance.com"];
+      function spotGet(path){
+        return tryHostList(SPOT_HOSTS, state.spotHostIdx || 0, path, function(hi){ state.spotHostIdx = hi; });
+      }
+      function pubGet(path){
+        return tryHosts(state.network, path);
+      }
+      // Data PASAR yang tampil (harga, grafik, daftar pasangan) selalu dari
+      // Futures MAINNET — pasar aslinya — dan order serta data akun juga
+      // dikirim ke sana. Banyak pasangan nyata — contohnya EVAAUSDT — adalah
+      // pasangan futures-only yang tidak punya pasangan spot, jadi mengambil
+      // grafiknya dari spot selalu berakhir "Invalid symbol".
+      function marketGet(path){
+        return tryHosts("mainnet", path);
+      }
+      function restBase(){
+        return NETWORKS[state.network].restHosts[state.hostIdx[state.network] || 0];
+      }
+      function rotateHost(nwKey){
+        var hosts = NETWORKS[nwKey].restHosts;
+        state.hostIdx[nwKey] = ((state.hostIdx[nwKey] || 0) + 1) % hosts.length;
+      }
+
+      function loadExchangeInfo(){
+        return marketGet("/fapi/v1/exchangeInfo").then(function(data){
+          applyExchangeInfo(data, false);
+        }).catch(function(){
+          // Cadangan: daftar pasangan dari data spot Binance Vision (browser-friendly).
+          return spotGet("/api/v3/exchangeInfo").then(function(data){
+            applyExchangeInfo(data, true);
+          }).catch(function(){ /* daftar POPULAR dipakai kalau dua-duanya gagal */ });
+        });
+      }
+      function applyExchangeInfo(data, fromSpot){
+        state.symbolsFromSpot = !!fromSpot;
+        (data.symbols || []).forEach(function(s){
+            var lot = null, priceF = null;
+            (s.filters || []).forEach(function(f){
+              if (f.filterType === "LOT_SIZE") lot = f;
+              if (f.filterType === "PRICE_FILTER") priceF = f;
+            });
+            var step = lot ? parseFloat(lot.stepSize) : 0.001;
+            var tick = priceF ? parseFloat(priceF.tickSize) : 0.1;
+            state.symbolInfo[s.symbol] = {
+              stepSize: step,
+              qtyDecimals: step >= 1 ? 0 : Math.min(8, Math.max(0, Math.round(-Math.log10(step)))),
+              minQty: lot ? parseFloat(lot.minQty) : 0,
+              tickDecimals: tick >= 1 ? 0 : Math.min(8, Math.max(0, Math.round(-Math.log10(tick))))
+            };
+          });
+        // Daftar pemilih TIDAK diganti oleh hasil API: daftar statis lengkap
+        // (STATIC_SYMBOLS) selalu jadi dasar supaya semua pasangan — termasuk
+        // EVAAUSDT — tetap ada walau semua API Binance gagal dari browser ini.
+        // Simbol live dari exchangeInfo futures hanya DITAMBAHKAN bila ada yang
+        // lebih baru dari daftar statis. Hasil spot tidak mengubah daftar:
+        // itu pasangan spot, bukan futures.
+        if (!fromSpot){
+          var have = {};
+          state.allSymbols.forEach(function(s){ have[s] = true; });
+          (data.symbols || []).forEach(function(s){
+            if (s.contractType === "PERPETUAL" && s.quoteAsset === "USDT" && s.status === "TRADING" && !have[s.symbol]){
+              have[s.symbol] = true;
+              state.allSymbols.push(s.symbol);
+            }
+          });
+        }
+        populateSymbolSelect();
+      }
+
+      function loadSpotTicker(){
+        return spotGet("/api/v3/ticker/24hr?symbol=" + state.symbol).then(function(t){
+          setDataSource("spot");
+          state.lastPrice = parseFloat(t.lastPrice);
+          state.markPrice = null;
+          renderStats({
+            change: parseFloat(t.priceChangePercent),
+            high: parseFloat(t.highPrice),
+            low: parseFloat(t.lowPrice),
+            vol: parseFloat(t.quoteVolume),
+            funding: NaN,
+            index: NaN
+          });
+          $("stMark").textContent = "—";
+          $("stFunding").textContent = "—";
+          updateEstimates();
+        });
+      }
+      function loadTicker(){
+        if (state.futuresDownUntil && Date.now() < state.futuresDownUntil){
+          return loadSpotTicker();
+        }
+        return Promise.all([
+          marketGet("/fapi/v1/ticker/24hr?symbol=" + state.symbol),
+          marketGet("/fapi/v1/premiumIndex?symbol=" + state.symbol)
+        ]).then(function(res){
+          state.futuresDownUntil = 0;
+          setDataSource("futures");
+          var t = res[0], p = res[1];
+          state.lastPrice = parseFloat(t.lastPrice);
+          state.markPrice = parseFloat(p.markPrice);
+          renderStats({
+            change: parseFloat(t.priceChangePercent),
+            high: parseFloat(t.highPrice),
+            low: parseFloat(t.lowPrice),
+            vol: parseFloat(t.quoteVolume),
+            funding: parseFloat(p.lastFundingRate),
+            index: parseFloat(p.indexPrice)
+          });
+          updateEstimates();
+        }).catch(function(fErr){
+          if (!isNetworkError(fErr)){
+            // Binance menjawab tapi menolak permintaan ini (mis. HTTP 400
+            // "Invalid symbol"): pasangan ini tidak ada di Futures Mainnet.
+            // Jangan alihkan ke spot (pasangan futures-only seperti EVAA
+            // memang tidak punya pasar spot) dan jangan tandai futures
+            // sebagai mati — pasangan lain tetap normal.
+            throw fErr;
+          }
+          // Semua alamat futures gagal dari browser ini → tampilkan harga SPOT
+          // dari Binance Vision sebagai cadangan (diberi label jelas di halaman),
+          // dan jangan uji ulang futures selama 60 detik supaya polling tetap ringan.
+          state.futuresDownUntil = Date.now() + 60000;
+          return loadSpotTicker().catch(function(){ throw fErr; });
+        });
+      }
+
+      function renderStats(s){
+        var priceEl = $("stPrice");
+        priceEl.textContent = fmtPrice(state.lastPrice);
+        priceEl.className = "stat-value mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
+        var ch = $("stChange");
+        ch.textContent = (s.change > 0 ? "+" : "") + (isNaN(s.change) ? "—" : s.change.toFixed(2) + "%");
+        ch.className = "stat-value mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
+        var cp = $("chPrice"), cc = $("chChange");
+        if (cp) cp.textContent = fmtPrice(state.lastPrice);
+        if (cc){
+          cc.textContent = (s.change > 0 ? "+" : "") + (isNaN(s.change) ? "—" : s.change.toFixed(2) + "%");
+          cc.className = "chart-change mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
+        }
+        $("stMark").textContent = fmtPrice(state.markPrice);
+        $("stHigh").textContent = fmtPrice(s.high);
+        $("stLow").textContent = fmtPrice(s.low);
+        $("stVol").textContent = fmtCompact(s.vol);
+        if (!isNaN(s.funding)) $("stFunding").textContent = (s.funding * 100).toFixed(4) + "%";
+      }
+
+      function applyKlines(rows){
+        state.klines = rows.map(function(r){
+          return { t: r[0], o: parseFloat(r[1]), h: parseFloat(r[2]), l: parseFloat(r[3]), c: parseFloat(r[4]), v: parseFloat(r[5]) };
+        });
+        $("chartMsg").classList.remove("show");
+        drawChart();
+        renderOhlc(state.klines[state.klines.length - 1]);
+      }
+      function loadSpotKlines(){
+        return spotGet("/api/v3/klines?symbol=" + state.symbol + "&interval=" + state.interval + "&limit=220")
+          .then(function(rows){
+            if (!rows || !rows.length){
+              var err = new Error("Tidak ada data kline spot untuk pasangan ini.");
+              err.status = 400;
+              err.binanceMsg = "Tidak ada data spot";
+              throw err;
+            }
+            setDataSource("spot");
+            applyKlines(rows);
+          });
+      }
+      function loadKlines(){
+        $("chartMsg").textContent = "Memuat data harga dari Binance…";
+        $("chartMsg").classList.add("show");
+        if (state.futuresDownUntil && Date.now() < state.futuresDownUntil){
+          return loadSpotKlines().catch(function(sErr){
+            if (sErr && sErr.status){
+              $("chartMsg").textContent = "Pasangan " + state.symbol + " tidak punya pasar spot di Binance (" + (sErr.binanceMsg || sErr.message) + "), dan API Futures sedang tidak terjangkau dari browser ini — jadi grafiknya belum bisa ditampilkan. Coba lagi sebentar lagi; rincian alamat yang gagal ada di panel Diagnosis Koneksi di bawah.";
+            } else {
+              $("chartMsg").textContent = "Gagal memuat grafik dari semua jalur data. Lihat panel Diagnosis Koneksi di bawah untuk rinciannya.";
+            }
+            $("chartMsg").classList.add("show");
+          });
+        }
+        return marketGet("/fapi/v1/klines?symbol=" + state.symbol + "&interval=" + state.interval + "&limit=220")
+          .then(function(rows){
+            state.futuresDownUntil = 0;
+            setDataSource("futures");
+            if (!rows || !rows.length){
+              $("chartMsg").textContent = "Binance tidak mengembalikan data grafik untuk pasangan " + state.symbol + " pada interval ini. Coba interval lain atau pasangan lain.";
+              $("chartMsg").classList.add("show");
+              return;
+            }
+            applyKlines(rows);
+          })
+          .catch(function(fErr){
+            if (!isNetworkError(fErr)){
+              // Binance menjawab tapi menolak (mis. HTTP 400 "Invalid
+              // symbol"): pasangan ini tidak terdaftar di Futures Mainnet.
+              // Tampilkan penyebab ASLI dari Binance — bukan tuduhan jaringan
+              // gagal — dan jangan jatuhkan semua pasangan ke mode spot.
+              $("chartMsg").textContent = "Grafik " + state.symbol + " tidak tersedia di Binance Futures Mainnet: " + (fErr.binanceMsg || fErr.message) + " Pasangan ini tidak bisa ditampilkan di terminal futures — pilih pasangan lain dari daftar.";
+              $("chartMsg").classList.add("show");
+              return;
+            }
+            // Cadangan grafik: kline SPOT dari Binance Vision (label cadangan tampil).
+            state.futuresDownUntil = Date.now() + 60000;
+            return loadSpotKlines()
+              .catch(function(sErr){
+                if (sErr && sErr.status){
+                  $("chartMsg").textContent = "API Futures tidak terjangkau dari browser ini, dan pasangan " + state.symbol + " tidak punya pasar spot di Binance (" + (sErr.binanceMsg || sErr.message) + ") — pasangan futures-only seperti ini hanya bisa tampil kalau API Futures terjangkau. Lihat panel Diagnosis Koneksi di bawah untuk alamat mana yang gagal.";
+                } else {
+                  $("chartMsg").textContent = "Gagal memuat grafik: semua jalur data Binance gagal dari browser ini (" + (fErr && fErr.message ? fErr.message : "Failed to fetch") + "). Lihat panel Diagnosis Koneksi di bawah grafik untuk alamat mana saja yang gagal dan alasannya.";
+                }
+                $("chartMsg").classList.add("show");
+                runDiagnostics();
+              });
+          });
+      }
+
+      /* ================= Sumber data aktif (futures / spot cadangan) ================= */
+      function setDataSource(ds){
+        if (state.dataSource === ds){ renderSourceUi(); return; }
+        state.dataSource = ds;
+        renderSourceUi();
+        if (ds === "spot") addLog("Semua alamat API Futures gagal dari browser ini — harga & grafik dialihkan ke data SPOT Binance (cadangan, diberi label). Order tetap lewat API Futures.", "err");
+        connectWs();
+      }
+      function renderSourceUi(){
+        var spot = state.dataSource === "spot";
+        var banner = $("srcBanner");
+        if (banner) banner.hidden = !spot;
+        $("chartTitle").textContent = state.symbol + (spot ? " · SPOT (cadangan)" : " Perpetual");
+      }
+
+      function renderOhlc(k){
+        if (!k) return;
+        $("ohO").textContent = fmtPrice(k.o);
+        $("ohH").textContent = fmtPrice(k.h);
+        $("ohL").textContent = fmtPrice(k.l);
+        $("ohC").textContent = fmtPrice(k.c);
+        $("ohV").textContent = fmtCompact(k.v);
+      }
+
+      /* ================= Diagnosis koneksi (dites dari browser pengguna) ================= */
+      function diagEndpoints(){
+        var rows = [];
+        NETWORKS.mainnet.restHosts.forEach(function(h){ rows.push({ key: h, label: "Futures Mainnet", path: "/fapi/v1/ping" }); });
+        SPOT_HOSTS.forEach(function(h){ rows.push({ key: h, label: "Spot (cadangan)", path: "/api/v3/ping" }); });
+        rows.push({ key: "wss://fstream.binance.com", label: "WebSocket Futures", ws: true });
+        rows.push({ key: "wss://data-stream.binance.vision", label: "WebSocket Spot", ws: true });
+        return rows;
+      }
+      function renderDiagList(){
+        var el = $("diagList");
+        if (!el) return;
+        el.innerHTML = diagEndpoints().map(function(r){
+          var d = hostDiag[r.key];
+          var status, cls;
+          if (!d){ status = "Belum dites"; cls = ""; }
+          else if (d.ok){ status = "Terjangkau"; cls = "ok"; }
+          else { status = "Gagal — " + d.msg; cls = "err"; }
+          return '<div class="diag-row"><span class="diag-host mono">' + esc(r.key.replace(/^https?:\/\//, "")) +
+            '</span><span class="diag-kind">' + esc(r.label) + '</span><span class="diag-status ' + cls + '">' + esc(status) + "</span></div>";
+        }).join("");
+      }
+      function probeWs(url){
+        return new Promise(function(resolve){
+          var done = false, ws = null;
+          function finish(ok, msg){
+            if (done) return;
+            done = true;
+            try { if (ws) ws.close(); } catch (e){}
+            resolve({ ok: ok, msg: msg });
+          }
+          try { ws = new WebSocket(url); } catch (e){ finish(false, String(e && e.message ? e.message : e)); return; }
+          setTimeout(function(){ finish(false, "timeout 5 detik"); }, 5000);
+          ws.onopen = function(){ finish(true, "OK"); };
+          ws.onerror = function(){ finish(false, "koneksi WebSocket gagal"); };
+        });
+      }
+      var diagRunning = false;
+      function runDiagnostics(){
+        if (diagRunning) return Promise.resolve();
+        diagRunning = true;
+        renderDiagList();
+        var jobs = diagEndpoints().map(function(r){
+          if (r.ws) return probeWs(r.key).then(function(res){ noteHost(r.key, res.ok, res.msg); });
+          return fetchWithTimeout(r.key + r.path, {}, 5000).then(function(resp){
+            noteHost(r.key, resp.ok, resp.ok ? "OK" : "HTTP " + resp.status + (resp.status === 451 ? " — Binance membatasi wilayah/jaringan ini" : ""));
+          }, function(e){
+            noteHost(r.key, false, e && e.message ? e.message : "Failed to fetch");
+          });
+        });
+        return Promise.all(jobs).then(function(){
+          diagRunning = false;
+          renderDiagList();
+        });
+      }
+
+      /* ================= Top gainers (data publik Mainnet) ================= */
+      var GAINER_RANGES = [
+        { id: "5m", label: "5m", minutes: 5 },
+        { id: "15m", label: "15m", minutes: 15 },
+        { id: "1h", label: "1j", hours: 1 },
+        { id: "2h", label: "2j", hours: 2 },
+        { id: "4h", label: "4j", hours: 4 },
+        { id: "6h", label: "6j", hours: 6 },
+        { id: "12h", label: "12j", hours: 12 },
+        { id: "24h", label: "24j", hours: 24 }
+      ];
+      function getMainnetPerps(){
+        // Daftar untuk filter top gainer = daftar di pemilih pasangan (statis
+        // lengkap + tambahan live bila ada). Tidak memanggil exchangeInfo lagi,
+        // jadi tetap lengkap walau API futures tidak terjangkau dari browser ini.
+        if (state.mainnetPerps) return Promise.resolve(state.mainnetPerps);
+        state.mainnetPerps = state.allSymbols.slice();
+        return Promise.resolve(state.mainnetPerps);
+      }
+      function loadGainers(force){
+        var range = GAINER_RANGES[GAINER_RANGES.length - 1];
+        GAINER_RANGES.forEach(function(r){ if (r.id === state.gainerRange) range = r; });
+        var cache = state.gainersCache[range.id];
+        if (!force && cache && (Date.now() - cache.at) < 60000){
+          renderGainers(cache.rows, range, cache.src);
+          return Promise.resolve();
+        }
+        var body = $("gainersBody");
+        body.innerHTML = '<div class="empty">Memuat top gainer (' + range.label + ") dari Binance…</div>";
+        var tickersP = tryHosts("mainnet", "/fapi/v1/ticker/24hr")
+          .then(function(t){ return { tickers: t, src: "futures" }; })
+          .catch(function(){
+            return spotGet("/api/v3/ticker/24hr").then(function(t){ return { tickers: t, src: "spot" }; });
+          });
+        return Promise.all([ tickersP, getMainnetPerps() ])
+          .then(function(res){
+            var tickers = res[0].tickers || [], src = res[0].src, perps = res[1] || [];
+            var perpSet = {};
+            perps.forEach(function(s){ perpSet[s] = true; });
+            var rows = (tickers || []).filter(function(t){
+              return t.symbol && t.symbol.slice(-4) === "USDT" && (!perps.length || perpSet[t.symbol]);
+            }).map(function(t){
+              return { symbol: t.symbol, price: parseFloat(t.lastPrice), change24: parseFloat(t.priceChangePercent), vol: parseFloat(t.quoteVolume) };
+            });
+            if (range.hours >= 24){
+              finish(rows.map(function(r){ return { symbol: r.symbol, price: r.price, change: r.change24, vol: r.vol }; }), src);
+              return null;
+            }
+            var cands = rows.slice().sort(function(a, b){ return b.vol - a.vol; }).slice(0, 80);
+            return fetchRangeChanges(cands, range, src).then(function(list){ finish(list, src); });
+          })
+          .catch(function(e){
+            body.innerHTML = '<div class="empty">Gagal memuat top gainer: semua jalur data Binance gagal dari browser ini (' + esc(e && e.message ? e.message : "Failed to fetch") + '). Lihat panel Diagnosis Koneksi untuk rinciannya, atau pakai tombol Muat Ulang.</div>';
+            runDiagnostics();
+          });
+        function finish(list, src){
+          var rows = (list || []).filter(function(r){ return r && !isNaN(r.change); })
+            .sort(function(a, b){ return b.change - a.change; }).slice(0, 15);
+          state.gainersCache[range.id] = { at: Date.now(), rows: rows, src: src };
+          renderGainers(rows, range, src);
+        }
+      }
+      function fetchRangeChanges(cands, range, src){
+        // Rentang menit (5m/15m) dihitung dari kline 1 menit; rentang jam
+        // dari kline 1 jam. Harga pembuka kline pertama = harga di awal rentang.
+        var iv = range.minutes ? "1m" : "1h";
+        var lim = (range.minutes ? range.minutes : range.hours) + 1;
+        var out = [];
+        var idx = 0;
+        function worker(){
+          if (idx >= cands.length) return Promise.resolve();
+          var c = cands[idx++];
+          var path = (src === "spot" ? "/api/v3/klines" : "/fapi/v1/klines") + "?symbol=" + c.symbol + "&interval=" + iv + "&limit=" + lim;
+          var req = src === "spot" ? spotGet(path) : tryHosts("mainnet", path);
+          return req
+            .then(function(ks){
+              if (ks && ks.length){
+                var openThen = parseFloat(ks[0][1]);
+                if (openThen > 0) out.push({ symbol: c.symbol, price: c.price, change: ((c.price - openThen) / openThen) * 100, vol: c.vol });
+              }
+            })
+            .catch(function(){})
+            .then(worker);
+        }
+        var workers = [];
+        for (var i = 0; i < 8; i++) workers.push(worker());
+        return Promise.all(workers).then(function(){ return out; });
+      }
+      function renderGainers(rows, range, src){
+        var body = $("gainersBody");
+        if (src === "spot"){
+          $("gainersNote").textContent = "Data SPOT Binance (cadangan — API Futures tidak terjangkau dari browser ini): pasangan USDT diurutkan dari kenaikan terbesar pada rentang " + range.label + ". Harga spot bisa sedikit berbeda dari harga futures. Klik baris untuk membuka pasangan itu di terminal.";
+        } else {
+          $("gainersNote").textContent = range.hours >= 24
+            ? "Semua pasangan futures USDT perpetual di Binance (Mainnet), diurutkan dari kenaikan 24 jam terbesar. Klik baris untuk membuka pasangan itu di terminal."
+            : "Dihitung dari 80 pasangan bervolume 24 jam terbesar: perubahan harga sejak " + (range.minutes ? range.minutes + " menit" : range.hours + " jam") + " lalu (data Mainnet). Klik baris untuk membuka pasangan itu di terminal.";
+        }
+        if (!rows.length){
+          body.innerHTML = '<div class="empty">Tidak ada data gainer saat ini.</div>';
+          return;
+        }
+        body.innerHTML = rows.map(function(r, i){
+          var upCls = r.change >= 0;
+          return '<button type="button" class="gainer-row" data-sym="' + esc(r.symbol) + '">' +
+            '<span class="g-rank mono">' + (i + 1) + "</span>" +
+            '<span class="g-sym mono">' + esc(r.symbol) + "</span>" +
+            '<span class="g-price mono">' + fmtPrice(r.price) + "</span>" +
+            '<span class="g-chg mono ' + (upCls ? "up" : "down") + '">' + (upCls ? "+" : "") + r.change.toFixed(2) + "%</span>" +
+            '<span class="g-vol mono">' + fmtCompact(r.vol) + "</span>" +
+            "</button>";
+        }).join("");
+        body.querySelectorAll("[data-sym]").forEach(function(b){
+          b.addEventListener("click", function(){ openSymbol(b.dataset.sym); });
+        });
+      }
+
+      /* ================= Chart ================= */
+      var chartCanvas = $("chart");
+      function cssVar(name){
+        return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      }
+      function drawChart(){
+        var wrap = chartCanvas.parentElement;
+        var w = wrap.clientWidth, h = wrap.clientHeight;
+        if (!w || !h || !state.klines.length) return;
+        var dpr = window.devicePixelRatio || 1;
+        if (chartCanvas.width !== Math.round(w * dpr) || chartCanvas.height !== Math.round(h * dpr)){
+          chartCanvas.width = Math.round(w * dpr);
+          chartCanvas.height = Math.round(h * dpr);
+        }
+        var ctx = chartCanvas.getContext("2d");
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        var data = state.klines;
+        var axisW = 66, axisH = 20;
+        var plotW = w - axisW, plotH = h - axisH;
+        var volH = Math.round(plotH * 0.14);
+        var priceH = plotH - volH - 6;
+
+        var min = Infinity, max = -Infinity, vmax = 0;
+        data.forEach(function(k){
+          if (k.l < min) min = k.l;
+          if (k.h > max) max = k.h;
+          if (k.v > vmax) vmax = k.v;
+        });
+        if (!isFinite(min) || max <= min){ max = min + 1; }
+        var pad = (max - min) * 0.07;
+        max += pad; min -= pad;
+
+        var green = cssVar("--green") || "#0ecb81";
+        var red = cssVar("--red") || "#f6465d";
+        var grid = cssVar("--border-soft") || "#1b222d";
+        var muted = cssVar("--muted") || "#8a94a3";
+        var textCol = cssVar("--text") || "#eaecef";
+
+        function y(p){ return ((max - p) / (max - min)) * priceH; }
+        var stepX = plotW / data.length;
+        var bodyW = Math.max(1, Math.floor(stepX * 0.62));
+
+        // grid + price labels
+        ctx.font = "10.5px 'IBM Plex Mono', monospace";
+        ctx.textBaseline = "middle";
+        var lines = 5;
+        for (var i = 0; i <= lines; i++){
+          var p = min + (max - min) * (i / lines);
+          var yy = y(p);
+          ctx.strokeStyle = grid; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(plotW, yy); ctx.stroke();
+          ctx.fillStyle = muted;
+          ctx.fillText(fmtPrice(p), plotW + 6, yy);
+        }
+        // volume bars
+        data.forEach(function(k, idx){
+          var x = idx * stepX + stepX / 2;
+          var vh = vmax > 0 ? (k.v / vmax) * volH : 0;
+          ctx.fillStyle = k.c >= k.o ? green : red;
+          ctx.globalAlpha = 0.45;
+          ctx.fillRect(x - bodyW / 2, plotH - vh, bodyW, vh);
+          ctx.globalAlpha = 1;
+        });
+        // candles
+        data.forEach(function(k, idx){
+          var x = idx * stepX + stepX / 2;
+          var col = k.c >= k.o ? green : red;
+          ctx.strokeStyle = col; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x, y(k.h)); ctx.lineTo(x, y(k.l)); ctx.stroke();
+          ctx.fillStyle = col;
+          var top = y(Math.max(k.o, k.c)), bot = y(Math.min(k.o, k.c));
+          ctx.fillRect(x - bodyW / 2, top, bodyW, Math.max(1, bot - top));
+        });
+        // last price line
+        if (state.lastPrice != null && state.lastPrice >= min && state.lastPrice <= max){
+          var ly = y(state.lastPrice);
+          ctx.strokeStyle = textCol; ctx.setLineDash([4, 4]); ctx.globalAlpha = 0.55;
+          ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(plotW, ly); ctx.stroke();
+          ctx.setLineDash([]); ctx.globalAlpha = 1;
+          ctx.fillStyle = textCol;
+          ctx.fillText(fmtPrice(state.lastPrice), plotW + 6, ly - 9);
+        }
+        // time labels
+        ctx.fillStyle = muted;
+        var ticks = 4;
+        for (var j = 0; j <= ticks; j++){
+          var idx2 = Math.min(data.length - 1, Math.round((data.length - 1) * (j / ticks)));
+          var d = new Date(data[idx2].t);
+          var lbl = state.interval === "1d"
+            ? d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" })
+            : d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
+          var tx = idx2 * stepX + stepX / 2 - 14;
+          ctx.fillText(lbl, Math.max(0, Math.min(tx, plotW - 30)), plotH + 10);
+        }
+      }
+
+      /* ================= WebSocket feed ================= */
+      function setFeed(mode, text){
+        var dot = $("feedDot"), wsDot = $("wsDot");
+        dot.className = "dot " + mode;
+        wsDot.className = "dot " + mode;
+        $("feedText").textContent = text;
+        $("wsText").textContent = "Feed: " + text;
+      }
+      function stopPolling(){
+        if (state.pollTimer){ clearInterval(state.pollTimer); state.pollTimer = null; }
+      }
+      function startPolling(){
+        if (state.pollTimer) return;
+        setFeed("poll", "Polling (cadangan)");
+        state.pollTimer = setInterval(function(){
+          loadTicker().catch(function(){});
+          loadKlines().catch(function(){});
+        }, 5000);
+      }
+      function connectWs(){
+        if (state.ws){ try { state.ws.close(); } catch (e){} state.ws = null; }
+        var sym = state.symbol.toLowerCase();
+        var spotMode = state.dataSource === "spot";
+        // Feed live mengikuti sumber data PASAR (Futures Mainnet) — sama
+        // seperti REST di marketGet().
+        var url = (spotMode ? "wss://data-stream.binance.vision" : NETWORKS.mainnet.ws) + "/stream?streams=" + sym + "@kline_" + state.interval + "/" + sym + "@miniTicker" + (spotMode ? "" : "/" + sym + "@markPrice@1s");
+        var ws;
+        try { ws = new WebSocket(url); } catch (e){ startPolling(); return; }
+        state.ws = ws;
+        var opened = false;
+        ws.onopen = function(){
+          opened = true; state.wsAlive = true;
+          stopPolling();
+          setFeed("live", spotMode ? "Live (spot)" : "Live");
+        };
+        ws.onmessage = function(ev){
+          var msg;
+          try { msg = JSON.parse(ev.data); } catch (e){ return; }
+          if (!msg || !msg.data) return;
+          var d = msg.data;
+          if (msg.stream.indexOf("@kline") >= 0 && d.k){
+            var k = d.k;
+            var candle = { t: k.t, o: parseFloat(k.o), h: parseFloat(k.h), l: parseFloat(k.l), c: parseFloat(k.c), v: parseFloat(k.v) };
+            var last = state.klines[state.klines.length - 1];
+            if (last && last.t === candle.t) state.klines[state.klines.length - 1] = candle;
+            else { state.klines.push(candle); if (state.klines.length > 260) state.klines.shift(); }
+            state.lastPrice = candle.c;
+            drawChart();
+            renderOhlc(candle);
+            updateEstimates();
+          } else if (msg.stream.indexOf("@miniTicker") >= 0){
+            state.lastPrice = parseFloat(d.c);
+            renderStats({
+              change: state.lastPrice && parseFloat(d.o) ? ((state.lastPrice - parseFloat(d.o)) / parseFloat(d.o)) * 100 : NaN,
+              high: parseFloat(d.h), low: parseFloat(d.l), vol: parseFloat(d.q),
+              funding: parseFloat($("stFunding").dataset.raw || "NaN"), index: NaN
+            });
+            if (state.markPrice != null) $("stMark").textContent = fmtPrice(state.markPrice);
+            drawChart();
+            updateEstimates();
+          } else if (msg.stream.indexOf("@markPrice") >= 0){
+            state.markPrice = parseFloat(d.p);
+            $("stMark").textContent = fmtPrice(state.markPrice);
+            var fr = parseFloat(d.r);
+            if (!isNaN(fr)){
+              $("stFunding").textContent = (fr * 100).toFixed(4) + "%";
+              $("stFunding").dataset.raw = String(fr);
+            }
+          }
+        };
+        ws.onerror = function(){ /* onclose menangani */ };
+        ws.onclose = function(){
+          state.wsAlive = false;
+          if (state.ws === ws){
+            setFeed("off", "Terputus — mencoba polling");
+            startPolling();
+            setTimeout(function(){ if (!state.wsAlive) connectWs(); }, 8000);
+          }
+        };
+        setTimeout(function(){ if (!opened && state.ws === ws) startPolling(); }, 7000);
+      }
+
+      /* ================= Symbol / interval switching ================= */
+      function populateSymbolSelect(){
+        var sel = $("symbolSelect");
+        if (!sel) return;
+        var all = state.allSymbols.length ? state.allSymbols : POPULAR;
+        var inAll = {};
+        all.forEach(function(s){ inAll[s] = true; });
+        var popular = POPULAR.filter(function(s){ return inAll[s]; });
+        if (state.symbol && !inAll[state.symbol]) popular = [state.symbol].concat(popular);
+        var popSet = {};
+        popular.forEach(function(s){ popSet[s] = true; });
+        var rest = all.filter(function(s){ return !popSet[s]; }).sort();
+        var html = '<optgroup label="Populer">';
+        popular.forEach(function(s){ html += '<option value="' + s + '">' + s + "</option>"; });
+        html += "</optgroup>";
+        if (rest.length){
+          html += '<optgroup label="Semua pasangan futures USDT — daftar lengkap di dalam halaman (' + all.length + ')">';
+          rest.forEach(function(s){ html += '<option value="' + s + '">' + s + "</option>"; });
+          html += "</optgroup>";
+        }
+        sel.innerHTML = html;
+        sel.value = state.symbol;
+      }
+      function openSymbol(sym){
+        var sel = $("symbolSelect");
+        if (!sel.querySelector('option[value="' + sym + '"]')){
+          var opt = document.createElement("option");
+          opt.value = sym;
+          opt.textContent = sym;
+          sel.appendChild(opt);
+        }
+        sel.value = sym;
+        setSymbol(sym);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      /* ================= Pencarian pasangan ================= */
+      function symbolMatches(q){
+        var all = state.allSymbols.length ? state.allSymbols : STATIC_SYMBOLS;
+        if (!q) return [];
+        var starts = [], contains = [];
+        all.forEach(function(s){
+          if (s.indexOf(q) === 0) starts.push(s);
+          else if (s.indexOf(q) !== -1) contains.push(s);
+        });
+        starts.sort(); contains.sort();
+        return starts.concat(contains).slice(0, 14);
+      }
+      function hideSymbolResults(){
+        var box = $("symbolResults");
+        if (box){ box.hidden = true; box.innerHTML = ""; }
+      }
+      function renderSymbolResults(){
+        var inp = $("symbolSearch"), box = $("symbolResults");
+        if (!inp || !box) return;
+        var q = inp.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+        if (!q){ hideSymbolResults(); return; }
+        var hits = symbolMatches(q);
+        if (!hits.length){
+          box.innerHTML = '<div class="pair-none">Tidak ada pasangan yang cocok dengan “' + esc(q) + '”. Coba nama dasar koinnya saja, mis. EVAA.</div>';
+          box.hidden = false;
+          return;
+        }
+        box.innerHTML = hits.map(function(s){
+          return '<button type="button" class="pair-hit mono" data-sym="' + s + '"><span>' + s + '</span><span class="pair-hit-base">' + esc(s.replace(/USDT$/, "")) + ' / USDT</span></button>';
+        }).join("");
+        box.hidden = false;
+        box.querySelectorAll(".pair-hit").forEach(function(b){
+          b.addEventListener("mousedown", function(e){
+            e.preventDefault();
+            pickSymbol(b.dataset.sym);
+          });
+        });
+      }
+      function pickSymbol(sym){
+        var inp = $("symbolSearch");
+        if (inp) inp.value = "";
+        hideSymbolResults();
+        var sel = $("symbolSelect");
+        if (sel && !sel.querySelector('option[value="' + sym + '"]')){
+          var opt = document.createElement("option");
+          opt.value = sym;
+          opt.textContent = sym;
+          sel.appendChild(opt);
+        }
+        if (sel) sel.value = sym;
+        setSymbol(sym);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      function setSymbol(sym){
+        state.symbol = sym;
+        renderSourceUi();
+        var base = sym.replace(/USDT$/, "").replace(/^1000/, "1000");
+        $("qtyUnit").textContent = base;
+        $("qtyUnit2").textContent = base;
+        stopPolling();
+        loadTicker().catch(function(){ setFeed("off", "Gagal memuat harga"); });
+        loadKlines();
+        connectWs();
+        updateEstimates();
+      }
+      function setIntervalSel(iv){
+        state.interval = iv;
+        var btns = $("intervalRow").querySelectorAll(".chip");
+        btns.forEach(function(b){ b.classList.toggle("active", b.dataset.iv === iv); });
+        loadKlines();
+        connectWs();
+      }
+
+      /* ================= Signed requests (Binance) ================= */
+      var enc = new TextEncoder();
+      function hexOf(buf){
+        var bytes = new Uint8Array(buf), out = "";
+        for (var i = 0; i < bytes.length; i++) out += bytes[i].toString(16).padStart(2, "0");
+        return out;
+      }
+      function hmacSha256(secret, message){
+        return crypto.subtle.importKey("raw", enc.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"])
+          .then(function(key){ return crypto.subtle.sign("HMAC", key, enc.encode(message)); })
+          .then(function(sig){ return hexOf(sig); });
+      }
+      function signedRequest(method, path, params){
+        if (!state.keys) return Promise.reject(new Error("API key belum terhubung."));
+        params = params || {};
+        params.timestamp = Date.now() + state.timeOffset;
+        params.recvWindow = 5000;
+        var qs = Object.keys(params).map(function(k){
+          return encodeURIComponent(k) + "=" + encodeURIComponent(params[k]);
+        }).join("&");
+        return hmacSha256(state.keys.secret, qs).then(function(sig){
+          function attempt(){
+            return fetchWithTimeout(restBase() + path + "?" + qs + "&signature=" + sig, {
+              method: method,
+              headers: { "X-MBX-APIKEY": state.keys.apiKey }
+            }, 15000).then(function(r){
+              return r.json().catch(function(){ return {}; }).then(function(body){
+                if (!r.ok){
+                  var err = new Error(body && body.msg ? body.msg : ("HTTP " + r.status));
+                  err.code = body && body.code;
+                  throw err;
+                }
+                return body;
+              });
+            });
+          }
+          return attempt().catch(function(e){
+            // Kegagalan jaringan pada panggilan baca (GET): coba alamat API cadangan sekali.
+            // Order (POST/DELETE) tidak pernah diulang otomatis — bisa terkirim dua kali.
+            if (method === "GET" && e && e.name === "TypeError"){
+              rotateHost(state.network);
+              return attempt();
+            }
+            throw e;
+          });
+        });
+      }
+      function syncTime(){
+        return pubGet("/fapi/v1/time").then(function(d){
+          state.timeOffset = d.serverTime - Date.now();
+        }).catch(function(){ state.timeOffset = 0; });
+      }
+
+      /* ================= Account data ================= */
+      function refreshAccount(){
+        if (!state.connected || !state.keys) return Promise.resolve();
+        return Promise.all([
+          signedRequest("GET", "/fapi/v2/balance", {}),
+          signedRequest("GET", "/fapi/v2/positionRisk", {}),
+          signedRequest("GET", "/fapi/v1/openOrders", {})
+        ]).then(function(res){
+          var balances = res[0] || [];
+          var usdt = null;
+          balances.forEach(function(b){ if (b.asset === "USDT") usdt = b; });
+          state.usdtAvail = usdt ? parseFloat(usdt.availableBalance) : null;
+          state.usdtWallet = usdt ? parseFloat(usdt.balance) : null;
+          state.positions = (res[1] || []).filter(function(p){ return parseFloat(p.positionAmt) !== 0; });
+          state.openOrders = res[2] || [];
+          renderAccount();
+        }).catch(function(e){
+          addLog("Gagal memuat data akun: " + e.message, "err");
+        });
+      }
+      function renderAccount(){
+        var line = $("acctLine");
+        if (state.connected){
+          line.innerHTML = "Terhubung ke <b>" + net().label + "</b> · Saldo USDT tersedia: <b class='mono'>" +
+            fmtMoney(state.usdtAvail) + "</b> · Total dompet: <b class='mono'>" + fmtMoney(state.usdtWallet) + "</b>";
+        } else {
+          line.textContent = "Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.";
+        }
+        $("estAvail").textContent = state.connected ? fmtMoney(state.usdtAvail) + " USDT" : "— (belum terhubung)";
+        renderPositions();
+        renderOrders();
+        updateEstimates();
+      }
+      function renderPositions(){
+        var box = $("posList");
+        $("posCount").textContent = state.positions.length ? "(" + state.positions.length + ")" : "";
+        if (!state.connected){
+          box.innerHTML = '<div class="empty">Belum terhubung — hubungkan API key untuk melihat posisi dari akun Binance kamu.</div>';
+          return;
+        }
+        if (!state.positions.length){
+          box.innerHTML = '<div class="empty">Tidak ada posisi terbuka di akun ini.</div>';
+          return;
+        }
+        box.innerHTML = state.positions.map(function(p, i){
+          var amt = parseFloat(p.positionAmt);
+          var long = amt > 0;
+          var pnl = parseFloat(p.unRealizedProfit);
+          return '<div class="pos-card">' +
+            '<div class="pos-top"><span class="pos-sym mono">' + esc(p.symbol) + '</span>' +
+            '<span class="side-tag ' + (long ? "long" : "short") + '">' + (long ? "LONG" : "SHORT") + "</span>" +
+            '<span class="mono">' + esc(p.leverage) + 'x</span>' +
+            '<span style="margin-left:auto"></span>' +
+            '<button type="button" class="btn btn-small btn-danger" data-close="' + i + '">Tutup Posisi</button></div>' +
+            '<div class="pos-grid">' +
+            '<div><span class="k">Jumlah</span><span class="v mono">' + esc(p.positionAmt) + "</span></div>" +
+            '<div><span class="k">Harga masuk</span><span class="v mono">' + fmtPrice(parseFloat(p.entryPrice)) + "</span></div>" +
+            '<div><span class="k">Mark price</span><span class="v mono">' + fmtPrice(parseFloat(p.markPrice)) + "</span></div>" +
+            '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + " USDT</span></div>" +
+            '<div><span class="k">Harga likuidasi</span><span class="v mono">' + fmtPrice(parseFloat(p.liquidationPrice)) + "</span></div>" +
+            '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(parseFloat(p.isolatedMargin) + parseFloat(p.positionInitialMargin || 0)) + " USDT</span></div>" +
+            "</div></div>";
+        }).join("");
+        box.querySelectorAll("[data-close]").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            confirmClosePosition(state.positions[Number(btn.dataset.close)]);
+          });
+        });
+      }
+      function renderOrders(){
+        var box = $("ordList");
+        $("ordCount").textContent = state.openOrders.length ? "(" + state.openOrders.length + ")" : "";
+        if (!state.connected){
+          box.innerHTML = '<div class="empty">Belum terhubung — hubungkan API key untuk melihat order terbuka.</div>';
+          return;
+        }
+        if (!state.openOrders.length){
+          box.innerHTML = '<div class="empty">Tidak ada order terbuka.</div>';
+          return;
+        }
+        box.innerHTML = state.openOrders.map(function(o){
+          var sideCls = o.side === "BUY" ? "up" : "down";
+          return '<div class="order-row mono">' +
+            "<span><b>" + esc(o.symbol) + "</b></span>" +
+            '<span class="' + sideCls + '">' + esc(o.side) + "</span>" +
+            "<span>" + esc(o.type) + "</span>" +
+            "<span>Qty " + esc(o.origQty) + "</span>" +
+            "<span>Harga " + (parseFloat(o.price) > 0 ? fmtPrice(parseFloat(o.price)) : "Market") + "</span>" +
+            (parseFloat(o.stopPrice) > 0 ? "<span>Stop " + fmtPrice(parseFloat(o.stopPrice)) + "</span>" : "") +
+            '<span class="grow"></span>' +
+            '<button type="button" class="btn btn-small" data-cancel="' + esc(o.symbol) + ":" + esc(o.orderId) + '">Batalkan</button>' +
+            "</div>";
+        }).join("");
+        box.querySelectorAll("[data-cancel]").forEach(function(btn){
+          btn.addEventListener("click", function(){
+            var parts = btn.dataset.cancel.split(":");
+            cancelOrder(parts[0], parts[1]);
+          });
+        });
+      }
+      function cancelOrder(symbol, orderId){
+        signedRequest("DELETE", "/fapi/v1/order", { symbol: symbol, orderId: orderId })
+          .then(function(){
+            addLog("Order " + orderId + " (" + symbol + ") dibatalkan.", "ok");
+            toast("Order dibatalkan.", "ok");
+            refreshAccount();
+          })
+          .catch(function(e){
+            addLog("Gagal membatalkan order: " + e.message, "err");
+            toast("Gagal membatalkan: " + e.message, "err");
+          });
+      }
+
+      /* ================= Estimates ================= */
+      function roundQty(q){
+        var info = state.symbolInfo[state.symbol];
+        if (!info) return q;
+        var stepped = Math.floor(q / info.stepSize) * info.stepSize;
+        return parseFloat(stepped.toFixed(info.qtyDecimals));
+      }
+      function currentQty(){
+        var v = parseFloat($("qtyInput").value);
+        return isNaN(v) || v <= 0 ? 0 : v;
+      }
+      function refPrice(){
+        if (state.orderType === "LIMIT"){
+          var lp = parseFloat($("limitPrice").value);
+          if (!isNaN(lp) && lp > 0) return lp;
+        }
+        return state.lastPrice;
+      }
+      function estLiq(entry, lev, side){
+        var mmr = 0.005; // perkiraan kasar maintenance margin
+        if (side === "BUY") return entry * (1 - 1 / lev + mmr);
+        return entry * (1 + 1 / lev - mmr);
+      }
+      function updateEstimates(){
+        var q = currentQty(), p = refPrice();
+        if (!q || !p){
+          $("estNotional").textContent = "—";
+          $("estMargin").textContent = "—";
+          $("estLiq").textContent = "—";
+          return;
+        }
+        var notional = q * p;
+        $("estNotional").textContent = fmtMoney(notional) + " USDT";
+        $("estMargin").textContent = fmtMoney(notional / state.leverage) + " USDT";
+        $("estLiq").textContent = "Long ≈ " + fmtPrice(estLiq(p, state.leverage, "BUY")) + " · Short ≈ " + fmtPrice(estLiq(p, state.leverage, "SELL"));
+      }
+
+      /* ================= Confirm modal ================= */
+      function openConfirm(opts){
+        $("confirmTitle").textContent = opts.title;
+        $("confirmSub").textContent = opts.sub || "";
+        $("confirmAlert").innerHTML = opts.alertHtml || "";
+        $("confirmErr").textContent = "";
+        $("confirmTable").innerHTML = opts.rows.map(function(r){
+          return "<tr><td>" + esc(r[0]) + '</td><td class="mono">' + esc(r[1]) + "</td></tr>";
+        }).join("");
+        var sendBtn = $("btnConfirmSend");
+        sendBtn.textContent = opts.sendLabel || "Kirim Order";
+        sendBtn.className = "btn " + (opts.danger ? "btn-danger" : "btn-accent");
+        state.confirmAction = opts.onConfirm;
+        $("confirmModal").classList.add("open");
+        if (opts.armDelay){
+          sendBtn.disabled = true;
+          var left = opts.armDelay;
+          var original = opts.sendLabel || "Kirim Order";
+          sendBtn.textContent = original + " (" + left + ")";
+          var iv = setInterval(function(){
+            left--;
+            if (left <= 0){
+              clearInterval(iv);
+              sendBtn.disabled = false;
+              sendBtn.textContent = original;
+            } else {
+              sendBtn.textContent = original + " (" + left + ")";
+            }
+            if (!$("confirmModal").classList.contains("open")) clearInterval(iv);
+          }, 1000);
+        } else {
+          sendBtn.disabled = false;
+        }
+      }
+      function closeConfirm(){
+        $("confirmModal").classList.remove("open");
+        state.confirmAction = null;
+      }
+
+      /* ================= Order flow ================= */
+      function setOrderMsg(text, kind){
+        var el = $("orderMsg");
+        el.textContent = text || "";
+        el.className = "order-msg" + (kind ? " " + kind : "");
+      }
+      function prepareOrder(side){
+        if (!state.connected || !state.keys){
+          setOrderMsg("Hubungkan API key dulu untuk mengirim order.", "err");
+          openApiModal();
+          return;
+        }
+        var q = roundQty(currentQty());
+        var p = refPrice();
+        if (!q || q <= 0){ setOrderMsg("Isi jumlah order dulu (lebih dari 0).", "err"); return; }
+        var info = state.symbolInfo[state.symbol];
+        if (info && q < info.minQty){
+          setOrderMsg("Jumlah di bawah minimum untuk " + state.symbol + " (" + info.minQty + ").", "err");
+          return;
+        }
+        if (!p){ setOrderMsg("Harga belum tersedia — tunggu feed harga tersambung.", "err"); return; }
+        var notional = q * p;
+        var cap = parseFloat($("capInput").value);
+        if (!isNaN(cap) && cap > 0 && notional > cap){
+          setOrderMsg("Ditolak: nilai order " + fmtMoney(notional) + " USDT melebihi batas maks. " + fmtMoney(cap) + " USDT. Turunkan jumlah atau naikkan batasnya dengan sadar.", "err");
+          addLog("Order ditolak halaman: nilai " + fmtMoney(notional) + " USDT di atas batas " + fmtMoney(cap) + " USDT.", "err");
+          return;
+        }
+        if (state.orderType === "LIMIT"){
+          var lp = parseFloat($("limitPrice").value);
+          if (isNaN(lp) || lp <= 0){ setOrderMsg("Isi harga limit dulu.", "err"); return; }
+        }
+        var tp = parseFloat($("tpInput").value);
+        var sl = parseFloat($("slInput").value);
+        var rows = [
+          ["Jaringan", net().label],
+          ["Pasangan", state.symbol],
+          ["Arah", side === "BUY" ? "LONG / BELI" : "SHORT / JUAL"],
+          ["Tipe", state.orderType],
+          ["Jumlah", q + " " + state.symbol.replace("USDT", "")],
+          ["Harga acuan", fmtPrice(p) + " USDT"],
+          ["Nilai order", "≈ " + fmtMoney(notional) + " USDT"],
+          ["Leverage", state.leverage + "x"],
+          ["Margin (perkiraan)", "≈ " + fmtMoney(notional / state.leverage) + " USDT"],
+          ["Likuidasi (perkiraan kasar)", fmtPrice(estLiq(p, state.leverage, side)) + " USDT"]
+        ];
+        if (!isNaN(tp) && tp > 0) rows.push(["Take profit", fmtPrice(tp) + " USDT"]);
+        if (!isNaN(sl) && sl > 0) rows.push(["Stop loss", fmtPrice(sl) + " USDT"]);
+        openConfirm({
+          title: "Konfirmasi Order — UANG ASLI",
+          sub: "Ini jaringan Mainnet. Order ini memakai uang asli di akun Binance kamu.",
+          alertHtml: '<div class="alert alert-danger"><b>Mainnet aktif.</b> Pastikan jumlah, arah, dan leverage sudah benar. Order market tereksekusi seketika dan tidak bisa dibatalkan.</div>',
+          rows: rows,
+          sendLabel: "Ya, Kirim Order Uang Asli",
+          danger: true,
+          armDelay: 3,
+          onConfirm: function(){ executeOrder(side, q, tp, sl); }
+        });
+      }
+      function executeOrder(side, qty, tp, sl){
+        var sendBtn = $("btnConfirmSend");
+        sendBtn.disabled = true;
+        sendBtn.textContent = "Mengirim…";
+        $("confirmErr").textContent = "";
+        var symbol = state.symbol;
+        signedRequest("POST", "/fapi/v1/leverage", { symbol: symbol, leverage: state.leverage })
+          .then(function(){
+            var params = { symbol: symbol, side: side, type: state.orderType, quantity: qty };
+            if (state.orderType === "LIMIT"){
+              params.price = parseFloat($("limitPrice").value);
+              params.timeInForce = "GTC";
+            }
+            return signedRequest("POST", "/fapi/v1/order", params);
+          })
+          .then(function(order){
+            closeConfirm();
+            var msg = "Order " + side + " " + qty + " " + symbol + " terkirim (ID " + order.orderId + ", status " + order.status + ").";
+            setOrderMsg(msg, "ok");
+            addLog(msg, "ok");
+            toast("Order terkirim: " + side + " " + symbol, "ok");
+            var extra = [];
+            if (!isNaN(tp) && tp > 0) extra.push(placeTpSl(symbol, side, "TAKE_PROFIT_MARKET", tp, "TP"));
+            if (!isNaN(sl) && sl > 0) extra.push(placeTpSl(symbol, side, "STOP_MARKET", sl, "SL"));
+            return Promise.all(extra);
+          })
+          .then(function(){
+            setTimeout(refreshAccount, 700);
+          })
+          .catch(function(e){
+            sendBtn.disabled = false;
+            sendBtn.textContent = "Kirim Order";
+            $("confirmErr").textContent = "Binance menolak: " + e.message;
+            setOrderMsg("Order gagal: " + e.message, "err");
+            addLog("Order gagal (" + symbol + "): " + e.message, "err");
+          });
+      }
+      function placeTpSl(symbol, entrySide, type, stopPrice, label){
+        var closeSide = entrySide === "BUY" ? "SELL" : "BUY";
+        return signedRequest("POST", "/fapi/v1/order", {
+          symbol: symbol, side: closeSide, type: type, stopPrice: stopPrice, closePosition: "true", workingType: "MARK_PRICE"
+        }).then(function(){
+          addLog(label + " terpasang di " + fmtPrice(stopPrice) + " untuk " + symbol + ".", "ok");
+        }).catch(function(e){
+          addLog("Gagal memasang " + label + " (" + symbol + "): " + e.message + " — pasang manual di Binance.", "err");
+          toast("Order utama masuk, tapi " + label + " gagal: " + e.message, "err");
+        });
+      }
+      function confirmClosePosition(p){
+        var amt = parseFloat(p.positionAmt);
+        var long = amt > 0;
+        openConfirm({
+          title: "Tutup Posisi " + p.symbol,
+          sub: "Posisi ditutup dengan order market berlawanan (reduce-only) sebesar posisi penuh.",
+          alertHtml: '<div class="alert alert-danger"><b>Mainnet aktif.</b> Ini menutup posisi uang asli kamu sekarang di harga market.</div>',
+          rows: [
+            ["Jaringan", net().label],
+            ["Pasangan", p.symbol],
+            ["Arah posisi", long ? "LONG" : "SHORT"],
+            ["Jumlah", Math.abs(amt) + " " + p.symbol.replace("USDT", "")],
+            ["Harga masuk", fmtPrice(parseFloat(p.entryPrice))],
+            ["PnL saat ini", fmtMoney(parseFloat(p.unRealizedProfit)) + " USDT"]
+          ],
+          sendLabel: "Tutup Posisi",
+          danger: true,
+          armDelay: 3,
+          onConfirm: function(){
+            var sendBtn = $("btnConfirmSend");
+            sendBtn.disabled = true;
+            sendBtn.textContent = "Menutup…";
+            signedRequest("POST", "/fapi/v1/order", {
+              symbol: p.symbol, side: long ? "SELL" : "BUY", type: "MARKET",
+              quantity: Math.abs(amt), reduceOnly: "true"
+            }).then(function(){
+              closeConfirm();
+              addLog("Posisi " + p.symbol + " ditutup.", "ok");
+              toast("Posisi " + p.symbol + " ditutup.", "ok");
+              setTimeout(refreshAccount, 700);
+            }).catch(function(e){
+              sendBtn.disabled = false;
+              sendBtn.textContent = "Tutup Posisi";
+              $("confirmErr").textContent = "Binance menolak: " + e.message;
+            });
+          }
+        });
+      }
+
+      /* ================= API key connect ================= */
+      function openApiModal(){
+        $("apiNetLabel").textContent = net().label;
+        $("apiErr").textContent = "";
+        $("btnDisconnect").hidden = !state.connected;
+        $("btnConnect").textContent = state.connected ? "Ganti Key" : "Hubungkan";
+        $("apiModal").classList.add("open");
+      }
+      function closeApiModal(){ $("apiModal").classList.remove("open"); }
+      function disconnect(silent){
+        state.keys = null;
+        state.connected = false;
+        state.usdtAvail = null; state.usdtWallet = null;
+        state.positions = []; state.openOrders = [];
+        if (state.acctTimer){ clearInterval(state.acctTimer); state.acctTimer = null; }
+        $("btnApi").textContent = "Hubungkan API Key";
+        renderAccount();
+        if (!silent) addLog("Koneksi API diputuskan. Key dibersihkan dari memori halaman.", "");
+      }
+      function connect(){
+        var apiKey = $("apiKeyInput").value.trim();
+        var secret = $("apiSecretInput").value.trim();
+        var errEl = $("apiErr");
+        if (!apiKey || !secret){ errEl.textContent = "Isi API key dan secret key dulu."; return; }
+        if (state.connecting) return;
+        state.connecting = true;
+        $("btnConnect").disabled = true;
+        $("btnConnect").textContent = "Menghubungkan…";
+        errEl.textContent = "";
+        state.keys = { apiKey: apiKey, secret: secret };
+        syncTime().then(function(){
+          return signedRequest("GET", "/fapi/v2/balance", {});
+        }).then(function(balances){
+          var usdt = null;
+          (balances || []).forEach(function(b){ if (b.asset === "USDT") usdt = b; });
+          state.usdtAvail = usdt ? parseFloat(usdt.availableBalance) : 0;
+          state.usdtWallet = usdt ? parseFloat(usdt.balance) : 0;
+          state.connected = true;
+          state.connecting = false;
+          $("btnConnect").disabled = false;
+          $("btnApi").textContent = "API Terhubung (" + net().label + ")";
+          $("apiKeyInput").value = "";
+          $("apiSecretInput").value = "";
+          closeApiModal();
+          addLog("API key terhubung ke " + net().label + ". Saldo USDT tersedia: " + fmtMoney(state.usdtAvail) + ".", "ok");
+          toast("Terhubung ke Binance " + net().label + ".", "ok");
+          refreshAccount();
+          if (state.acctTimer) clearInterval(state.acctTimer);
+          state.acctTimer = setInterval(refreshAccount, 15000);
+        }).catch(function(e){
+          state.keys = null;
+          state.connected = false;
+          state.connecting = false;
+          $("btnConnect").disabled = false;
+          $("btnConnect").textContent = "Hubungkan";
+          var hint = "";
+          if (e.code === -2015) hint = " Cek lagi key-nya: pastikan benar, izin Futures aktif, dan (kalau dibatasi IP) IP kamu sudah terdaftar.";
+          else if (e.code === -1021) hint = " Jam perangkat kamu berbeda jauh dari server Binance — sinkronkan jam perangkat lalu coba lagi.";
+          errEl.textContent = "Gagal terhubung: " + e.message + hint;
+          addLog("Gagal menghubungkan API key: " + e.message, "err");
+        });
+      }
+
+      /* ================= Wiring ================= */
+      function init(){
+        var sel = $("symbolSelect");
+        populateSymbolSelect();
+        sel.addEventListener("change", function(){
+          var si = $("symbolSearch");
+          if (si) si.value = "";
+          hideSymbolResults();
+          setSymbol(sel.value);
+        });
+
+        var searchInp = $("symbolSearch");
+        if (searchInp){
+          searchInp.addEventListener("input", renderSymbolResults);
+          searchInp.addEventListener("focus", renderSymbolResults);
+          searchInp.addEventListener("keydown", function(e){
+            if (e.key === "Enter"){
+              e.preventDefault();
+              var first = $("symbolResults").querySelector(".pair-hit");
+              if (first) pickSymbol(first.dataset.sym);
+            } else if (e.key === "Escape"){
+              searchInp.value = "";
+              hideSymbolResults();
+              searchInp.blur();
+            }
+          });
+          document.addEventListener("click", function(e){
+            var wrap = $("pairSearchWrap");
+            if (wrap && !wrap.contains(e.target)) hideSymbolResults();
+          });
+        }
+
+        $("gainerRangeRow").querySelectorAll(".chip").forEach(function(b){
+          b.addEventListener("click", function(){
+            state.gainerRange = b.dataset.range;
+            $("gainerRangeRow").querySelectorAll(".chip").forEach(function(x){ x.classList.toggle("active", x === b); });
+            loadGainers(false);
+          });
+        });
+        $("btnGainersRefresh").addEventListener("click", function(){ loadGainers(true); });
+        $("btnDiag").addEventListener("click", function(){ runDiagnostics(); });
+        loadGainers(false);
+        setInterval(function(){ loadGainers(true); }, 90000);
+
+        $("btnApi").addEventListener("click", openApiModal);
+        $("btnApiCancel").addEventListener("click", closeApiModal);
+        $("btnConnect").addEventListener("click", connect);
+        $("btnDisconnect").addEventListener("click", function(){ disconnect(); closeApiModal(); });
+        $("apiModal").addEventListener("click", function(e){ if (e.target === this) closeApiModal(); });
+
+        $("intervalRow").querySelectorAll(".chip").forEach(function(b){
+          b.addEventListener("click", function(){ setIntervalSel(b.dataset.iv); });
+        });
+
+        $("levRange").addEventListener("input", function(){
+          state.leverage = Number(this.value);
+          $("levValue").textContent = state.leverage + "x";
+          updateEstimates();
+        });
+        $("levChips").querySelectorAll("button").forEach(function(b){
+          b.addEventListener("click", function(){
+            state.leverage = Number(b.dataset.lev);
+            $("levRange").value = state.leverage;
+            $("levValue").textContent = state.leverage + "x";
+            updateEstimates();
+          });
+        });
+
+        $("typeSeg").querySelectorAll("button").forEach(function(b){
+          b.addEventListener("click", function(){
+            state.orderType = b.dataset.type;
+            $("typeSeg").querySelectorAll("button").forEach(function(x){ x.classList.toggle("active", x === b); });
+            $("limitPriceField").hidden = state.orderType !== "LIMIT";
+            if (state.orderType === "LIMIT" && !$("limitPrice").value && state.lastPrice){
+              var info = state.symbolInfo[state.symbol];
+              var dec = info ? info.tickDecimals : 2;
+              $("limitPrice").value = Number(state.lastPrice).toFixed(dec);
+            }
+            updateEstimates();
+          });
+        });
+
+        ["qtyInput", "limitPrice", "capInput"].forEach(function(id){
+          $(id).addEventListener("input", updateEstimates);
+        });
+        $("qtyInput").addEventListener("change", function(){
+          var q = currentQty();
+          if (q > 0){
+            var r = roundQty(q);
+            if (r !== q && r > 0) this.value = r;
+          }
+        });
+        $("pctRow").querySelectorAll("button").forEach(function(b){
+          b.addEventListener("click", function(){
+            if (!state.connected || state.usdtAvail == null){
+              setOrderMsg("Persentase saldo butuh koneksi API — hubungkan key dulu untuk membaca saldo kamu.", "err");
+              return;
+            }
+            var p = refPrice();
+            if (!p){ setOrderMsg("Harga belum tersedia.", "err"); return; }
+            var pct = Number(b.dataset.pct) / 100;
+            var q = roundQty((state.usdtAvail * pct * state.leverage) / p);
+            if (q <= 0){ setOrderMsg("Saldo tidak cukup untuk jumlah minimum order ini.", "err"); return; }
+            $("qtyInput").value = q;
+            setOrderMsg("");
+            updateEstimates();
+          });
+        });
+
+        $("btnLong").addEventListener("click", function(){ prepareOrder("BUY"); });
+        $("btnShort").addEventListener("click", function(){ prepareOrder("SELL"); });
+
+        $("btnConfirmCancel").addEventListener("click", closeConfirm);
+        $("confirmModal").addEventListener("click", function(e){ if (e.target === this) closeConfirm(); });
+        $("btnConfirmSend").addEventListener("click", function(){
+          if (state.confirmAction) state.confirmAction();
+        });
+
+        document.querySelectorAll(".tab").forEach(function(t){
+          t.addEventListener("click", function(){
+            document.querySelectorAll(".tab").forEach(function(x){ x.classList.toggle("active", x === t); });
+            ["positions", "orders", "log"].forEach(function(name){
+              $("tab-" + name).hidden = name !== t.dataset.tab;
+            });
+          });
+        });
+        $("btnRefreshAcct").addEventListener("click", function(){
+          if (state.connected) refreshAccount();
+          else toast("Belum terhubung — hubungkan API key dulu.");
+        });
+
+        var resizeTimer = null;
+        window.addEventListener("resize", function(){
+          clearTimeout(resizeTimer);
+          resizeTimer = setTimeout(drawChart, 120);
+        });
+        if (window.ResizeObserver){
+          new ResizeObserver(function(){ drawChart(); }).observe(chartCanvas.parentElement);
+        }
+        // Redraw chart when the OS theme flips (axis colors come from CSS vars)
+        if (window.matchMedia){
+          var mq = window.matchMedia("(prefers-color-scheme: dark)");
+          if (mq.addEventListener) mq.addEventListener("change", function(){ drawChart(); });
+        }
+
+        loadExchangeInfo().then(function(){
+          loadTicker().catch(function(){ setFeed("off", "Gagal memuat harga"); });
+          loadKlines();
+        });
+        connectWs();
+        renderDiagList();
+        runDiagnostics();
+        renderAccount();
+        addLog("Halaman siap. Semua harga, grafik, dan order memakai Futures Mainnet (uang asli).", "");
+      }
+
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
+      else init();
+    })();
+    </script>
+  </body>
+</html>
