@@ -133,7 +133,7 @@
       .chip.active{ color:var(--accent); border-color:var(--accent); }
       .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
       .chart-wrap{ position:relative; height:460px; }
-      @media (max-width:960px){ .chart-wrap{ height:272px; } }
+      @media (max-width:960px){ .chart-wrap{ height:196px; } }
       #chart{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
       #chart.grabbing{ cursor:grabbing; }
       .chart-tools{
@@ -1038,7 +1038,14 @@
         openOrders: [],
         ws: null,
         wsAlive: false,
+        lastWsMsgAt: 0,          // kapan pesan WebSocket terakhir diterima (denyut feed)
+        wsStartedAt: 0,          // kapan socket saat ini mulai disambungkan
+        wsGen: 0,                // generasi socket — kejadian dari socket lama diabaikan
+        wsRetry: 0,              // jumlah percobaan sambung ulang berturut-turut (untuk jeda bertingkat)
+        wsReconnectTimer: null,
         pollTimer: null,
+        gainersBusy: false,      // true selama satu putaran harga gainer sedang diambil
+        gainersUpdatedAt: 0,     // kapan daftar gainer terakhir diperbarui (live maupun penuh)
         acctTimer: null,
         confirmAction: null,
         hostIdx: { mainnet: 0 },
@@ -1563,16 +1570,24 @@
         state.mainnetPerps = state.allSymbols.slice();
         return Promise.resolve(state.mainnetPerps);
       }
-      function loadGainers(force){
+      function currentGainerRange(){
         var range = GAINER_RANGES[GAINER_RANGES.length - 1];
         GAINER_RANGES.forEach(function(r){ if (r.id === state.gainerRange) range = r; });
+        return range;
+      }
+      function loadGainers(force, silent){
+        var range = currentGainerRange();
         var cache = state.gainersCache[range.id];
         if (!force && cache && (Date.now() - cache.at) < 60000){
           renderGainers(cache.rows, range, cache.src);
           return Promise.resolve();
         }
+        if (silent && state.gainersBusy) return Promise.resolve();
         var body = $("gainersBody");
-        body.innerHTML = '<div class="empty">Memuat top gainer (' + range.label + ") dari Binance…</div>";
+        // Mode senyap (pembaruan otomatis berkala): daftar yang sedang
+        // tampil TIDAK dikosongkan jadi tulisan "Memuat…" tiap putaran —
+        // angka diganti di tempat begitu data baru tiba.
+        if (!silent) body.innerHTML = '<div class="empty">Memuat top gainer (' + range.label + ") dari Binance…</div>";
         var tickersP = tryHosts("mainnet", "/fapi/v1/ticker/24hr")
           .then(function(t){ return { tickers: t, src: "futures" }; })
           .catch(function(){
@@ -1586,16 +1601,22 @@
             var rows = (tickers || []).filter(function(t){
               return t.symbol && t.symbol.slice(-4) === "USDT" && (!perps.length || perpSet[t.symbol]);
             }).map(function(t){
-              return { symbol: t.symbol, price: parseFloat(t.lastPrice), change24: parseFloat(t.priceChangePercent), vol: parseFloat(t.quoteVolume) };
+              return { symbol: t.symbol, price: parseFloat(t.lastPrice), change24: parseFloat(t.priceChangePercent), priceChange: parseFloat(t.priceChange), vol: parseFloat(t.quoteVolume) };
             });
             if (range.hours >= 24){
-              finish(rows.map(function(r){ return { symbol: r.symbol, price: r.price, change: r.change24, vol: r.vol }; }), src);
+              // openThen disimpan supaya perubahan % bisa dihitung ulang
+              // langsung dari harga live pada putaran harga berkala.
+              finish(rows.map(function(r){ return { symbol: r.symbol, price: r.price, change: r.change24, vol: r.vol, openThen: (!isNaN(r.priceChange) && (r.price - r.priceChange) > 0) ? r.price - r.priceChange : null }; }), src);
               return null;
             }
             var cands = rows.slice().sort(function(a, b){ return b.vol - a.vol; }).slice(0, 80);
             return fetchRangeChanges(cands, range, src).then(function(list){ finish(list, src); });
           })
           .catch(function(e){
+            // Pembaruan otomatis yang gagal tidak mengosongkan daftar yang
+            // sedang tampil — angka terakhir tetap terlihat dan putaran
+            // berikutnya mencoba lagi sendiri.
+            if (silent && state.gainersCache[range.id]) return;
             body.innerHTML = '<div class="empty">Gagal memuat top gainer: semua jalur data Binance gagal dari browser ini (' + esc(e && e.message ? e.message : "Failed to fetch") + '). Lihat panel Diagnosis Koneksi untuk rinciannya, atau pakai tombol Muat Ulang.</div>';
             runDiagnostics();
           });
@@ -1603,8 +1624,52 @@
           var rows = (list || []).filter(function(r){ return r && !isNaN(r.change); })
             .sort(function(a, b){ return b.change - a.change; }).slice(0, 15);
           state.gainersCache[range.id] = { at: Date.now(), rows: rows, src: src };
+          state.gainersUpdatedAt = Date.now();
           renderGainers(rows, range, src);
         }
+      }
+      // Putaran harga gainer: SATU permintaan ticker untuk semua pasangan,
+      // lalu harga (& urutan peringkat) baris yang sedang tampil diperbarui
+      // di tempat. Inilah yang membuat daftar gainer bergerak mengikuti
+      // pasar tiap ±10 detik tanpa menunggu hitungan penuh dan tanpa
+      // tombol Muat Ulang. Hitungan penuh (termasuk kline rentang pendek)
+      // tetap jalan berkala lewat loadGainers senyap.
+      function tickGainers(){
+        if (document.hidden || state.gainersBusy) return;
+        var range = currentGainerRange();
+        var cache = state.gainersCache[range.id];
+        if (!cache || !cache.rows || !cache.rows.length) return;
+        state.gainersBusy = true;
+        var req = cache.src === "spot"
+          ? spotGet("/api/v3/ticker/24hr")
+          : tryHosts("mainnet", "/fapi/v1/ticker/24hr");
+        req.then(function(tickers){
+          var bySym = {};
+          (tickers || []).forEach(function(t){ if (t && t.symbol) bySym[t.symbol] = t; });
+          var changed = false;
+          cache.rows.forEach(function(r){
+            var t = bySym[r.symbol];
+            if (!t) return;
+            var p = parseFloat(t.lastPrice);
+            if (isNaN(p)) return;
+            r.price = p;
+            if (range.hours >= 24){
+              var ch = parseFloat(t.priceChangePercent);
+              if (!isNaN(ch)) r.change = ch;
+              var v = parseFloat(t.quoteVolume);
+              if (!isNaN(v)) r.vol = v;
+            } else if (r.openThen > 0){
+              r.change = ((p - r.openThen) / r.openThen) * 100;
+            }
+            changed = true;
+          });
+          if (changed){
+            cache.rows.sort(function(a, b){ return b.change - a.change; });
+            cache.at = Date.now();
+            state.gainersUpdatedAt = Date.now();
+            renderGainers(cache.rows, range, cache.src);
+          }
+        }).catch(function(){}).then(function(){ state.gainersBusy = false; });
       }
       function fetchRangeChanges(cands, range, src){
         // Rentang menit (5m/15m) dihitung dari kline 1 menit; rentang jam
@@ -1622,7 +1687,7 @@
             .then(function(ks){
               if (ks && ks.length){
                 var openThen = parseFloat(ks[0][1]);
-                if (openThen > 0) out.push({ symbol: c.symbol, price: c.price, change: ((c.price - openThen) / openThen) * 100, vol: c.vol });
+                if (openThen > 0) out.push({ symbol: c.symbol, price: c.price, change: ((c.price - openThen) / openThen) * 100, vol: c.vol, openThen: openThen });
               }
             })
             .catch(function(){})
@@ -1634,12 +1699,15 @@
       }
       function renderGainers(rows, range, src){
         var body = $("gainersBody");
+        var upd = state.gainersUpdatedAt
+          ? " Harga & peringkat diperbarui otomatis mengikuti pergerakan pasar · terakhir " + new Date(state.gainersUpdatedAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) + "."
+          : "";
         if (src === "spot"){
-          $("gainersNote").textContent = "Data SPOT Binance (cadangan — API Futures tidak terjangkau dari browser ini): pasangan USDT diurutkan dari kenaikan terbesar pada rentang " + range.label + ". Harga spot bisa sedikit berbeda dari harga futures. Klik baris untuk membuka pasangan itu di terminal.";
+          $("gainersNote").textContent = "Data SPOT Binance (cadangan — API Futures tidak terjangkau dari browser ini): pasangan USDT diurutkan dari kenaikan terbesar pada rentang " + range.label + ". Harga spot bisa sedikit berbeda dari harga futures. Klik baris untuk membuka pasangan itu di terminal." + upd;
         } else {
-          $("gainersNote").textContent = range.hours >= 24
+          $("gainersNote").textContent = (range.hours >= 24
             ? "Semua pasangan futures USDT perpetual di Binance (Mainnet), diurutkan dari kenaikan 24 jam terbesar. Klik baris untuk membuka pasangan itu di terminal."
-            : "Dihitung dari 80 pasangan bervolume 24 jam terbesar: perubahan harga sejak " + (range.minutes ? range.minutes + " menit" : range.hours + " jam") + " lalu (data Mainnet). Klik baris untuk membuka pasangan itu di terminal.";
+            : "Dihitung dari 80 pasangan bervolume 24 jam terbesar: perubahan harga sejak " + (range.minutes ? range.minutes + " menit" : range.hours + " jam") + " lalu (data Mainnet). Klik baris untuk membuka pasangan itu di terminal.") + upd;
         }
         if (!rows.length){
           body.innerHTML = '<div class="empty">Tidak ada data gainer saat ini.</div>';
@@ -1852,58 +1920,102 @@
       function stopPolling(){
         if (state.pollTimer){ clearInterval(state.pollTimer); state.pollTimer = null; }
       }
+      // Terapkan satu candle live (dari WebSocket maupun polling) ke grafik
+      // TANPA memuat ulang seluruh data: candle yang sama diperbarui di
+      // tempat, candle baru ditambahkan di ujung. Jendela zoom hanya ikut
+      // bergeser kalau sedang menempel di candle terakhir — tampilan
+      // riwayat yang sedang dilihat pengguna tidak diganggu.
+      function applyLiveCandle(candle){
+        var last = state.klines[state.klines.length - 1];
+        if (last && last.t === candle.t){
+          state.klines[state.klines.length - 1] = candle;
+        } else if (last && candle.t < last.t){
+          return; // candle lama dari respons polling yang telat — abaikan
+        } else if (last){
+          var vBefore = chartView();
+          var followTail = vBefore.count >= vBefore.total || (vBefore.start + vBefore.count >= vBefore.total);
+          state.klines.push(candle);
+          var dropped = 0;
+          while (state.klines.length > 260){ state.klines.shift(); dropped++; }
+          if (state.viewCount > 0){
+            if (followTail) state.viewStart = state.klines.length - state.viewCount;
+            else state.viewStart = Math.max(0, state.viewStart - dropped);
+          }
+        } else {
+          state.klines.push(candle);
+        }
+        state.lastPrice = candle.c;
+        drawChart();
+        if (state.hoverIdx < 0) renderOhlc(candle);
+        updateEstimates();
+      }
+      // Polling cadangan yang RINGAN: cukup harga terakhir + 3 candle
+      // terakhir yang digabung ke grafik (bukan unduh ulang 220 candle
+      // tiap putaran seperti sebelumnya, yang juga mengedipkan lapisan
+      // "Memuat…" dan mereset zoom tiap 5 detik).
+      function pollKlinesTail(){
+        var req = state.dataSource === "spot"
+          ? spotGet("/api/v3/klines?symbol=" + state.symbol + "&interval=" + state.interval + "&limit=3")
+          : marketGet("/fapi/v1/klines?symbol=" + state.symbol + "&interval=" + state.interval + "&limit=3");
+        return req.then(function(rows){
+          if (!rows || !rows.length) return;
+          rows.forEach(function(r){
+            applyLiveCandle({ t: r[0], o: parseFloat(r[1]), h: parseFloat(r[2]), l: parseFloat(r[3]), c: parseFloat(r[4]), v: parseFloat(r[5]) });
+          });
+        }).catch(function(){});
+      }
+      function pollTick(){
+        if (document.hidden) return;
+        loadTicker().catch(function(){});
+        pollKlinesTail();
+      }
       function startPolling(){
         if (state.pollTimer) return;
-        setFeed("poll", "Polling (cadangan)");
-        state.pollTimer = setInterval(function(){
-          loadTicker().catch(function(){});
-          loadKlines().catch(function(){});
-        }, 5000);
+        setFeed("poll", "Polling otomatis (cadangan)");
+        pollTick();
+        state.pollTimer = setInterval(pollTick, 3000);
+      }
+      function scheduleWsReconnect(){
+        if (state.wsReconnectTimer) return;
+        var delays = [2000, 5000, 10000, 20000, 30000];
+        var delay = delays[Math.min(state.wsRetry, delays.length - 1)];
+        state.wsRetry++;
+        state.wsReconnectTimer = setTimeout(function(){
+          state.wsReconnectTimer = null;
+          if (!state.wsAlive) connectWs();
+        }, delay);
       }
       function connectWs(){
+        state.wsGen++;
+        var gen = state.wsGen;
+        if (state.wsReconnectTimer){ clearTimeout(state.wsReconnectTimer); state.wsReconnectTimer = null; }
         if (state.ws){ try { state.ws.close(); } catch (e){} state.ws = null; }
+        state.wsAlive = false;
         var sym = state.symbol.toLowerCase();
         var spotMode = state.dataSource === "spot";
         // Feed live mengikuti sumber data PASAR (Futures Mainnet) — sama
         // seperti REST di marketGet().
         var url = (spotMode ? "wss://data-stream.binance.vision" : NETWORKS.mainnet.ws) + "/stream?streams=" + sym + "@kline_" + state.interval + "/" + sym + "@miniTicker" + (spotMode ? "" : "/" + sym + "@markPrice@1s");
         var ws;
-        try { ws = new WebSocket(url); } catch (e){ startPolling(); return; }
+        try { ws = new WebSocket(url); } catch (e){ startPolling(); scheduleWsReconnect(); return; }
         state.ws = ws;
-        var opened = false;
+        state.wsStartedAt = Date.now();
         ws.onopen = function(){
-          opened = true; state.wsAlive = true;
+          if (gen !== state.wsGen) return;
+          state.wsAlive = true; state.wsRetry = 0; state.lastWsMsgAt = Date.now();
           stopPolling();
           setFeed("live", spotMode ? "Live (spot)" : "Live");
         };
         ws.onmessage = function(ev){
+          if (gen !== state.wsGen) return;
+          state.lastWsMsgAt = Date.now();
           var msg;
           try { msg = JSON.parse(ev.data); } catch (e){ return; }
           if (!msg || !msg.data) return;
           var d = msg.data;
           if (msg.stream.indexOf("@kline") >= 0 && d.k){
             var k = d.k;
-            var candle = { t: k.t, o: parseFloat(k.o), h: parseFloat(k.h), l: parseFloat(k.l), c: parseFloat(k.c), v: parseFloat(k.v) };
-            var last = state.klines[state.klines.length - 1];
-            if (last && last.t === candle.t) state.klines[state.klines.length - 1] = candle;
-            else {
-              // Candle baru: kalau jendela zoom sedang menempel di candle
-              // terakhir, geser ikut maju; kalau pengguna sedang melihat
-              // riwayat lama, jangan diganggu.
-              var vBefore = chartView();
-              var followTail = vBefore.count >= vBefore.total || (vBefore.start + vBefore.count >= vBefore.total);
-              state.klines.push(candle);
-              var dropped = 0;
-              while (state.klines.length > 260){ state.klines.shift(); dropped++; }
-              if (state.viewCount > 0){
-                if (followTail) state.viewStart = state.klines.length - state.viewCount;
-                else state.viewStart = Math.max(0, state.viewStart - dropped);
-              }
-            }
-            state.lastPrice = candle.c;
-            drawChart();
-            if (state.hoverIdx < 0) renderOhlc(candle);
-            updateEstimates();
+            applyLiveCandle({ t: k.t, o: parseFloat(k.o), h: parseFloat(k.h), l: parseFloat(k.l), c: parseFloat(k.c), v: parseFloat(k.v) });
           } else if (msg.stream.indexOf("@miniTicker") >= 0){
             state.lastPrice = parseFloat(d.c);
             renderStats({
@@ -1924,16 +2036,52 @@
             }
           }
         };
-        ws.onerror = function(){ /* onclose menangani */ };
+        ws.onerror = function(){ try { ws.close(); } catch (e){} };
         ws.onclose = function(){
+          if (gen !== state.wsGen) return;
           state.wsAlive = false;
-          if (state.ws === ws){
-            setFeed("off", "Terputus — mencoba polling");
-            startPolling();
-            setTimeout(function(){ if (!state.wsAlive) connectWs(); }, 8000);
-          }
+          setFeed("off", "Terputus — polling otomatis, menyambung ulang…");
+          startPolling();
+          scheduleWsReconnect();
         };
-        setTimeout(function(){ if (!opened && state.ws === ws) startPolling(); }, 7000);
+      }
+      // Watchdog feed: WebSocket bisa mati DIAM-DIAM tanpa memicu onclose
+      // (koneksi setengah terbuka — umum di HP saat pindah jaringan, sinyal
+      // hilang sesaat, atau aplikasi di-background lalu dibuka lagi). Tanpa
+      // penjaga, grafik membeku selamanya sampai halaman dimuat ulang
+      // manual — itulah yang dulu terasa "harus di-refresh terus".
+      // Watchdog memeriksa denyut feed tiap 4 detik: kalau lebih dari
+      // 12 detik tidak ada pesan apa pun, socket dipaksa dibuang, polling
+      // mengambil alih harga, dan penyambungan ulang dijadwalkan.
+      function startFeedWatchdog(){
+        setInterval(function(){
+          if (document.hidden) return;
+          if (state.wsAlive){
+            if (state.lastWsMsgAt && Date.now() - state.lastWsMsgAt > 12000){
+              var dead = state.ws;
+              state.wsAlive = false;
+              state.wsGen++; // kejadian susulan dari socket mati ini diabaikan
+              if (state.ws === dead) state.ws = null;
+              if (dead){ try { dead.close(); } catch (e){} }
+              setFeed("off", "Feed macet — polling otomatis, menyambung ulang…");
+              startPolling();
+              scheduleWsReconnect();
+            }
+          } else if (state.ws && state.ws.readyState === 0 && Date.now() - state.wsStartedAt > 15000){
+            // Socket menggantung di status "menyambung" lebih dari
+            // 15 detik tanpa pernah terbuka — buang dan coba lagi;
+            // polling menjaga harga tetap bergerak selama itu.
+            var stuck = state.ws;
+            state.wsGen++;
+            state.ws = null;
+            try { stuck.close(); } catch (e){}
+            startPolling();
+            scheduleWsReconnect();
+          } else if (!state.pollTimer && !state.wsReconnectTimer){
+            startPolling();
+            scheduleWsReconnect();
+          }
+        }, 4000);
       }
 
       /* ================= Symbol / interval switching ================= */
@@ -3084,7 +3232,12 @@
         $("btnGainersRefresh").addEventListener("click", function(){ loadGainers(true); });
         $("btnDiag").addEventListener("click", function(){ runDiagnostics(); });
         loadGainers(false);
-        setInterval(function(){ loadGainers(true); }, 90000);
+        // Gainer bergerak sendiri: harga & peringkat diperbarui di tempat
+        // tiap 10 detik (satu permintaan ticker untuk semua pasangan),
+        // dan hitungan penuh diulang senyap tiap 60 detik — tanpa perlu
+        // menekan Muat Ulang dan tanpa mengosongkan daftar.
+        setInterval(function(){ tickGainers(); }, 10000);
+        setInterval(function(){ loadGainers(true, true); }, 60000);
 
         $("btnApi").addEventListener("click", openApiModal);
         $("btnApiCancel").addEventListener("click", closeApiModal);
@@ -3375,11 +3528,28 @@
           if (mq.addEventListener) mq.addEventListener("change", function(){ drawChart(); });
         }
 
+        // Saat halaman kembali terlihat (HP dibuka lagi / pindah tab
+        // balik), feed WebSocket sering sudah mati di latar belakang.
+        // Segarkan harga, grafik, dan gainer seketika + sambungkan ulang
+        // feed — pengguna tidak perlu memuat ulang halaman.
+        document.addEventListener("visibilitychange", function(){
+          if (document.hidden) return;
+          if (!state.wsAlive || (state.lastWsMsgAt && Date.now() - state.lastWsMsgAt > 8000)){
+            connectWs();
+            startPolling();
+          }
+          pollTick();
+          tickGainers();
+          var gc = state.gainersCache[state.gainerRange];
+          if (!gc || Date.now() - gc.at > 45000) loadGainers(true, true);
+        });
+
         loadExchangeInfo().then(function(){
           loadTicker().catch(function(){ setFeed("off", "Gagal memuat harga"); });
           loadKlines();
         });
         connectWs();
+        startFeedWatchdog();
         renderDiagList();
         runDiagnostics();
         renderAccount();
