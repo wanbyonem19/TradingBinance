@@ -293,6 +293,12 @@
       .g-chg{ font-weight:700; text-align:right; }
       .g-vol{ color:var(--faint); text-align:right; font-size:12px; }
       .gainers-note{ font-size:12px; color:var(--faint); margin:10px 0 0; }
+      .gainers-more{
+        width:100%; min-height:44px; margin-top:8px; padding:0 12px;
+        border:1px solid var(--border); border-radius:8px; background:var(--panel-2);
+        color:var(--accent); font-weight:700; font-size:13px;
+      }
+      .gainers-more:hover{ border-color:var(--faint); }
       @media (max-width:640px){
         .gainer-row{ grid-template-columns:26px 1fr auto auto; }
         .g-vol{ display:none; }
@@ -744,6 +750,7 @@
         mainnetPerps: null,
         gainerRange: "24h",
         gainersCache: {},
+        gainersExpanded: false,
         dataSource: "futures",   // "futures" | "spot" — sumber data harga/grafik yang sedang tampil
         futuresDownUntil: 0,     // selama timestamp ini, futures dianggap tak terjangkau (langsung pakai spot)
         spotHostIdx: 0,
@@ -1296,7 +1303,8 @@
           body.innerHTML = '<div class="empty">Tidak ada data gainer saat ini.</div>';
           return;
         }
-        body.innerHTML = rows.map(function(r, i){
+        var shown = state.gainersExpanded ? rows : rows.slice(0, 5);
+        body.innerHTML = shown.map(function(r, i){
           var upCls = r.change >= 0;
           return '<button type="button" class="gainer-row" data-sym="' + esc(r.symbol) + '">' +
             '<span class="g-rank mono">' + (i + 1) + "</span>" +
@@ -1309,6 +1317,19 @@
         body.querySelectorAll("[data-sym]").forEach(function(b){
           b.addEventListener("click", function(){ openSymbol(b.dataset.sym); });
         });
+        if (rows.length > 5){
+          var moreBtn = document.createElement("button");
+          moreBtn.type = "button";
+          moreBtn.className = "gainers-more";
+          moreBtn.textContent = state.gainersExpanded
+            ? "Tampilkan lebih sedikit"
+            : "Lihat selengkapnya — peringkat 6–" + rows.length;
+          moreBtn.addEventListener("click", function(){
+            state.gainersExpanded = !state.gainersExpanded;
+            renderGainers(rows, range, src);
+          });
+          body.appendChild(moreBtn);
+        }
       }
 
       /* ================= Chart ================= */
@@ -2152,6 +2173,7 @@
         $("gainerRangeRow").querySelectorAll(".chip").forEach(function(b){
           b.addEventListener("click", function(){
             state.gainerRange = b.dataset.range;
+            state.gainersExpanded = false;
             $("gainerRangeRow").querySelectorAll(".chip").forEach(function(x){ x.classList.toggle("active", x === b); });
             loadGainers(false);
           });
