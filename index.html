@@ -187,6 +187,7 @@
       }
       .lev-head{ display:flex; justify-content:space-between; align-items:baseline; }
       .lev-value{ font-size:18px; font-weight:700; }
+      .lev-note{ font-size:12px; color:var(--muted); margin:7px 0 0; }
       input[type="range"]{ width:100%; min-height:36px; accent-color:var(--accent); }
       .seg{ display:flex; background:var(--input-bg); border:1px solid var(--border); border-radius:8px; padding:3px; gap:3px; }
       .seg button{
@@ -560,6 +561,7 @@
               <button type="button" data-lev="20">20x</button>
               <button type="button" data-lev="50">50x</button>
             </div>
+            <p class="lev-note" id="levNote">Batas leverage per pasangan dibaca dari Binance setelah API terhubung; sementara pilihan dibatasi maks 50x.</p>
           </div>
 
           <div class="field">
@@ -835,6 +837,8 @@
         connected: false,
         connecting: false,
         leverage: 10,
+        levBrackets: {},         // symbol -> brackets dari /fapi/v1/leverageBracket Binance (dimuat saat API terhubung)
+        levCap: 50,              // batas leverage efektif untuk pasangan + nilai order saat ini
         orderType: "MARKET",
         lastPrice: null,
         markPrice: null,
@@ -1804,6 +1808,9 @@
         loadKlines();
         connectWs();
         updateEstimates();
+        // Pasangan yang belum ada di peta bracket (mis. listing baru):
+        // ambil bracket-nya sendiri supaya batasnya tetap akurat.
+        if (state.connected) loadLevBracket(sym);
       }
       function setIntervalSel(iv){
         state.interval = iv;
@@ -2040,6 +2047,99 @@
           });
       }
 
+      /* ================= Batas leverage per pasangan (dari Binance) ================= */
+      // Batas maks leverage BUKAN angka tetap: Binance menetapkannya per
+      // pasangan lewat "leverage bracket" — tiap pasangan punya bracket
+      // bertingkat menurut ukuran posisi (notional), dan leverage tertinggi
+      // hanya berlaku untuk tingkat terkecil. Endpoint resminya
+      // (/fapi/v1/leverageBracket) adalah endpoint bertanda tangan, jadi
+      // bracket dimuat dari akun pengguna sendiri begitu API terhubung,
+      // lalu pilihan leverage di panel order dibatasi mengikuti pasangan
+      // yang sedang dibuka + nilai order yang sedang diisi.
+      function storeLevBrackets(list){
+        (list || []).forEach(function(entry){
+          if (!entry || !entry.symbol || !entry.brackets || !entry.brackets.length) return;
+          var bs = entry.brackets.slice().sort(function(a, b){ return (a.bracket || 0) - (b.bracket || 0); });
+          state.levBrackets[entry.symbol] = bs;
+        });
+      }
+      function loadLevBrackets(){
+        if (!state.keys) return Promise.resolve();
+        return signedRequest("GET", "/fapi/v1/leverageBracket", {})
+          .then(function(list){
+            storeLevBrackets(list);
+            applyLevCap();
+          })
+          .catch(function(e){
+            addLog("Gagal membaca batas leverage dari Binance: " + e.message + " — pilihan leverage sementara tetap maks 50x.", "err");
+          });
+      }
+      function loadLevBracket(sym){
+        if (!state.keys || state.levBrackets[sym]) return Promise.resolve();
+        return signedRequest("GET", "/fapi/v1/leverageBracket", { symbol: sym })
+          .then(function(list){
+            storeLevBrackets(list);
+            if (sym === state.symbol) applyLevCap();
+          })
+          .catch(function(){ /* pasangan tanpa data bracket: batas umum 50x tetap berlaku */ });
+      }
+      function symbolMaxLev(sym){
+        var bs = state.levBrackets[sym];
+        if (!bs || !bs.length) return null;
+        var lev = parseInt(bs[0].initialLeverage, 10);
+        return lev > 0 ? lev : null;
+      }
+      // Batas efektif = leverage tertinggi yang Binance izinkan untuk
+      // pasangan ini pada nilai order (notional) yang sedang diisi. Tanpa
+      // jumlah order, yang dipakai bracket tingkat pertama (maks pasangan).
+      // Tanpa data bracket (belum terhubung), batas umum lama: 50x.
+      function effectiveMaxLev(){
+        var bs = state.levBrackets[state.symbol];
+        if (!bs || !bs.length) return 50;
+        var q = currentQty(), p = refPrice();
+        var notional = (q > 0 && p) ? q * p : 0;
+        if (!(notional > 0)) return symbolMaxLev(state.symbol) || 50;
+        for (var i = 0; i < bs.length; i++){
+          var cap = parseFloat(bs[i].notionalCap);
+          if (!isNaN(cap) && notional <= cap){
+            var lev = parseInt(bs[i].initialLeverage, 10);
+            if (lev > 0) return lev;
+          }
+        }
+        var lastLev = parseInt(bs[bs.length - 1].initialLeverage, 10);
+        return lastLev > 0 ? lastLev : 50;
+      }
+      var lastLevNote = null;
+      function applyLevCap(){
+        var cap = effectiveMaxLev();
+        state.levCap = cap;
+        var range = $("levRange");
+        if (range && Number(range.max) !== cap) range.max = cap;
+        if (state.leverage > cap){
+          state.leverage = cap;
+          if (range) range.value = cap;
+          var lv = $("levValue");
+          if (lv) lv.textContent = cap + "x";
+        }
+        $("levChips").querySelectorAll("button").forEach(function(b){
+          b.disabled = Number(b.dataset.lev) > cap;
+        });
+        var symMax = symbolMaxLev(state.symbol);
+        var note;
+        if (symMax == null){
+          note = "Batas leverage per pasangan dibaca dari Binance setelah API terhubung; sementara pilihan dibatasi maks 50x.";
+        } else if (cap < symMax){
+          note = "Maks leverage " + state.symbol + ": " + symMax + "x (dari Binance) — untuk nilai order saat ini batasnya " + cap + "x, karena Binance menurunkan batas leverage untuk posisi yang lebih besar.";
+        } else {
+          note = "Maks leverage " + state.symbol + ": " + symMax + "x — dibaca dari Binance untuk pasangan ini.";
+        }
+        if (note !== lastLevNote){
+          lastLevNote = note;
+          var noteEl = $("levNote");
+          if (noteEl) noteEl.textContent = note;
+        }
+      }
+
       /* ================= Estimates ================= */
       function roundQty(q){
         var info = state.symbolInfo[state.symbol];
@@ -2064,6 +2164,9 @@
         return entry * (1 + 1 / lev - mmr);
       }
       function updateEstimates(){
+        // Batas leverage mengikuti pasangan + nilai order yang sedang diisi;
+        // terapkan dulu supaya perkiraan margin memakai leverage yang sah.
+        applyLevCap();
         var q = currentQty(), p = refPrice();
         if (!q || !p){
           $("estNotional").textContent = "—";
@@ -2137,6 +2240,12 @@
           return;
         }
         if (!p){ setOrderMsg("Harga belum tersedia — tunggu feed harga tersambung.", "err"); return; }
+        var levCapNow = effectiveMaxLev();
+        if (state.leverage > levCapNow){
+          setOrderMsg("Leverage " + state.leverage + "x melebihi batas Binance untuk " + state.symbol + " pada nilai order ini (maks " + levCapNow + "x). Pilihan sudah diturunkan ke " + levCapNow + "x — periksa lagi lalu kirim ulang.", "err");
+          applyLevCap();
+          return;
+        }
         var notional = q * p;
         var cap = parseFloat($("capInput").value);
         if (!isNaN(cap) && cap > 0 && notional > cap){
@@ -2279,6 +2388,8 @@
       function disconnect(silent){
         state.keys = null;
         state.connected = false;
+        state.levBrackets = {};
+        applyLevCap();
         state.usdtAvail = null; state.usdtWallet = null;
         state.positions = []; state.openOrders = [];
         if (state.acctTimer){ clearInterval(state.acctTimer); state.acctTimer = null; }
@@ -2314,6 +2425,7 @@
           addLog("API key terhubung ke " + net().label + ". Saldo USDT tersedia: " + fmtMoney(state.usdtAvail) + ".", "ok");
           toast("Terhubung ke Binance " + net().label + ".", "ok");
           refreshAccount();
+          loadLevBrackets();
           if (state.acctTimer) clearInterval(state.acctTimer);
           state.acctTimer = setInterval(refreshAccount, 15000);
         }).catch(function(e){
