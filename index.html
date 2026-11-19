@@ -133,7 +133,7 @@
       .chip.active{ color:var(--accent); border-color:var(--accent); }
       .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
       .chart-wrap{ position:relative; height:460px; }
-      @media (max-width:960px){ .chart-wrap{ height:340px; } }
+      @media (max-width:960px){ .chart-wrap{ height:272px; } }
       #chart{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
       #chart.grabbing{ cursor:grabbing; }
       .chart-tools{
@@ -160,6 +160,7 @@
         border-top:1px solid var(--border-soft); font-size:12px; color:var(--muted);
       }
       .ohlc b{ color:var(--text); font-weight:600; }
+      .hint-short{ display:none; }
 
       /* ---------- Order panel ---------- */
       .order-panel{ padding:14px; }
@@ -227,16 +228,22 @@
       }
       .fineprint{ font-size:12px; color:var(--faint); margin-top:10px; }
 
-      /* ---------- Panel order melayang (ala betslip sportsbook) ---------- */
+      /* ---------- Panel order: sidebar lengket (desktop) / bottom bar + sheet (HP) ---------- */
       .order-head{ display:flex; align-items:center; gap:10px; }
       .order-head h2{ flex:0 0 auto; }
       .order-head-sym{ color:var(--muted); font-size:13px; font-weight:600; }
+      .order-head-price{ font-size:14px; font-weight:700; display:none; }
       .order-toggle{
-        display:none; margin-left:auto; min-height:38px; padding:0 14px; border-radius:7px;
+        display:none; margin-left:auto; min-height:38px; padding:0 16px; border-radius:7px;
         border:1px solid var(--accent); background:var(--accent); color:var(--accent-text); font-weight:700;
       }
+      .order-backdrop{
+        display:none; position:fixed; inset:0; z-index:39;
+        background:rgba(0,0,0,.55); opacity:0; transition:opacity .25s ease;
+      }
+      .order-backdrop.show{ opacity:1; }
       /* Desktop: panel order jadi sidebar yang menempel (sticky) di kanan grafik,
-         tetap terlihat saat halaman digulir — seperti betslip sportsbook. */
+         tetap terlihat saat halaman digulir. */
       @media (min-width:961px){
         .layout{ grid-template-columns:minmax(0,1fr) 384px; }
         .order-panel{
@@ -245,22 +252,40 @@
         }
         .order-grid{ grid-template-columns:1fr; }
       }
-      /* HP: panel order melayang sebagai betslip di bagian bawah layar.
-         Ringkas jadi satu bar; ketuk "Buka" untuk memperluas formulir order. */
+      /* HP: panel order menempel rata di tepi bawah layar sebagai bar ringkas
+         (judul + simbol + harga terakhir + tombol Buka) — bukan kotak melayang
+         yang mengambang di atas konten. Saat dibuka, formulirnya naik sebagai
+         sheet dari tepi bawah dengan latar redup di belakangnya; ketuk latar
+         atau tombol Tutup untuk melipatnya lagi. */
       @media (max-width:960px){
-        body{ padding-bottom:70px; }
+        body{ padding-bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
+        .order-backdrop{ display:block; pointer-events:none; }
+        .order-backdrop.show{ pointer-events:auto; }
         .order-panel{
-          position:fixed; left:8px; right:8px; bottom:8px; z-index:40;
-          padding:8px 12px; max-height:56px; overflow:hidden;
-          box-shadow:0 14px 38px rgba(0,0,0,.55);
-          transition:max-height .25s ease;
+          position:fixed; left:0; right:0; bottom:0; z-index:40;
+          border-left:0; border-right:0; border-bottom:0; border-radius:16px 16px 0 0;
+          padding:6px 14px calc(8px + env(safe-area-inset-bottom, 0px));
+          box-shadow:0 -10px 30px rgba(0,0,0,.45);
         }
-        .order-panel .order-head h2{ margin:0; }
-        .order-panel.open{ max-height:min(86vh, 760px); overflow-y:auto; padding:14px; }
-        .order-panel:not(.open) .acct-line,
-        .order-panel:not(.open) .order-grid,
-        .order-panel:not(.open) .cap-row,
-        .order-panel:not(.open) .fineprint{ display:none; }
+        .order-panel::before{
+          content:""; display:block; width:42px; height:4px; border-radius:2px;
+          background:var(--border); margin:0 auto 6px;
+        }
+        .order-panel .order-head{ min-height:40px; cursor:pointer; }
+        .order-panel .order-head h2{ margin:0; font-size:14px; }
+        .order-head-price{ display:inline; }
+        .order-panel .acct-line,
+        .order-panel .order-grid,
+        .order-panel .cap-row,
+        .order-panel .fineprint{ display:none; }
+        .order-panel.open{
+          max-height:min(88dvh, 780px); overflow-y:auto;
+          padding:10px 14px calc(14px + env(safe-area-inset-bottom, 0px));
+        }
+        .order-panel.open .acct-line{ display:block; }
+        .order-panel.open .order-grid{ display:grid; }
+        .order-panel.open .cap-row{ display:flex; }
+        .order-panel.open .fineprint{ display:block; }
         .order-toggle{ display:inline-block; }
       }
 
@@ -395,6 +420,17 @@
         .stat.opt{ display:none; }
         .stat.price .stat-value{ font-size:17px; }
         .chart-price .cp-val{ font-size:20px; }
+        .chart-head{ padding:8px 10px; gap:6px; }
+        .gainers-panel{ padding:12px; }
+        .gainers-head h2{ order:0; }
+        #btnGainersRefresh{ order:1; margin-left:auto; }
+        .gainers-head .chip-row{ order:2; flex:1 1 100%; margin-left:0; flex-wrap:nowrap; gap:4px; }
+        .gainers-net{ display:none; }
+        .gainers-head .chip{ flex:1 1 0; min-height:32px; padding:0 2px; font-size:12px; }
+        .gainer-row{ min-height:40px; padding:7px 4px; }
+        .hint-long{ display:none; }
+        .hint-short{ display:inline; margin-left:auto; }
+        .toasts{ bottom:calc(74px + env(safe-area-inset-bottom, 0px)); }
       }
       @media (prefers-reduced-motion: reduce){
         *{ transition:none !important; animation:none !important; }
@@ -438,7 +474,7 @@
             <span class="stat-label">Terendah 24j</span>
             <span class="stat-value mono" id="stLow">—</span>
           </div>
-          <div class="stat">
+          <div class="stat opt">
             <span class="stat-label">Volume 24j (USDT)</span>
             <span class="stat-value mono" id="stVol">—</span>
           </div>
@@ -491,15 +527,20 @@
             <span>O <b id="ohO">—</b></span><span>H <b id="ohH">—</b></span>
             <span>L <b id="ohL">—</b></span><span>C <b id="ohC">—</b></span>
             <span>Vol <b id="ohV">—</b></span>
-            <span style="margin-left:auto">Geser grafik untuk menggeser waktu · cubit / scroll mouse / tombol + − untuk zoom · ketuk 2x untuk reset</span>
+            <span class="hint-long" style="margin-left:auto">Geser grafik untuk menggeser waktu · cubit / scroll mouse / tombol + − untuk zoom · ketuk 2x untuk reset</span>
+            <span class="hint-short">Geser untuk geser waktu · cubit untuk zoom</span>
           </div>
         </section>
+
+        <!-- Latar redup di belakang sheet order (hanya tampil di HP saat sheet dibuka) -->
+        <div class="order-backdrop" id="orderBackdrop"></div>
 
         <!-- Order panel -->
         <aside class="panel order-panel" id="orderPanel" aria-label="Panel order">
           <div class="order-head">
             <h2>Buat Order</h2>
             <span class="order-head-sym mono" id="orderHeadSym">BTCUSDT</span>
+            <span class="order-head-price mono" id="orderHeadPrice">—</span>
             <button type="button" class="order-toggle" id="btnOrderToggle" aria-expanded="false">Buka</button>
           </div>
           <div class="acct-line" id="acctLine">Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.</div>
@@ -1105,6 +1146,11 @@
         var ch = $("stChange");
         ch.textContent = (s.change > 0 ? "+" : "") + (isNaN(s.change) ? "—" : s.change.toFixed(2) + "%");
         ch.className = "stat-value mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
+        var ohp = $("orderHeadPrice");
+        if (ohp){
+          ohp.textContent = fmtPrice(state.lastPrice);
+          ohp.className = "order-head-price mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
+        }
         var cp = $("chPrice"), cc = $("chChange");
         if (cp) cp.textContent = fmtPrice(state.lastPrice);
         if (cc){
@@ -2519,12 +2565,23 @@
           });
         })();
 
-        /* ---------- Panel order melayang: buka/tutup di HP ---------- */
-        $("btnOrderToggle").addEventListener("click", function(){
-          var panel = $("orderPanel");
-          var open = panel.classList.toggle("open");
-          this.textContent = open ? "Tutup" : "Buka";
-          this.setAttribute("aria-expanded", open ? "true" : "false");
+        /* ---------- Panel order: bottom bar + sheet di HP ---------- */
+        var orderPanelEl = $("orderPanel");
+        var orderBackdropEl = $("orderBackdrop");
+        var orderToggleBtn = $("btnOrderToggle");
+        function setOrderSheet(open){
+          orderPanelEl.classList.toggle("open", open);
+          orderBackdropEl.classList.toggle("show", open);
+          orderToggleBtn.textContent = open ? "Tutup" : "Buka";
+          orderToggleBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        }
+        orderToggleBtn.addEventListener("click", function(){
+          setOrderSheet(!orderPanelEl.classList.contains("open"));
+        });
+        orderBackdropEl.addEventListener("click", function(){ setOrderSheet(false); });
+        orderPanelEl.querySelector(".order-head").addEventListener("click", function(e){
+          if (e.target === orderToggleBtn) return;
+          if (window.innerWidth <= 960) setOrderSheet(!orderPanelEl.classList.contains("open"));
         });
 
         var resizeTimer = null;
