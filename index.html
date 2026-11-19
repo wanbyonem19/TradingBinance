@@ -844,7 +844,7 @@
         markPrice: null,
         klines: [],
         viewStart: 0,            // indeks candle pertama yang tampil di grafik (zoom/pan)
-        viewCount: 0,            // jumlah candle yang tampil; 0 = semua
+        viewCount: 0,            // jumlah candle yang tampil; 0 = semua; bawaan awal = 25 (CHART_DEFAULT_VIEW)
         hoverIdx: -1,            // candle di bawah pointer (crosshair); -1 = tidak ada
         symbolInfo: {},          // symbol -> {stepSize, qtyDecimals, minQty, tickDecimals}
         usdtAvail: null,
@@ -1569,9 +1569,14 @@
 
       /* ================= Zoom & geser grafik ================= */
       var CHART_MIN_VIEW = 12;
+      // Tampilan awal grafik: hanya 25 candle terakhir yang tampil, supaya
+      // candle langsung besar dan terbaca tanpa perlu zoom manual. Pengguna
+      // tetap bisa zoom out sampai semua candle atau zoom in lebih dekat.
+      var CHART_DEFAULT_VIEW = 25;
       function resetChartView(){
-        state.viewStart = 0;
-        state.viewCount = 0;
+        var total = state.klines.length;
+        state.viewCount = total > CHART_DEFAULT_VIEW ? CHART_DEFAULT_VIEW : 0;
+        state.viewStart = Math.max(0, total - CHART_DEFAULT_VIEW);
         state.hoverIdx = -1;
       }
       function chartView(){
