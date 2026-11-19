@@ -11,11 +11,11 @@
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
       :root{
-        --bg:#0b0e11; --panel:#12161d; --panel-2:#171d27; --input-bg:#0d1117;
-        --border:#242d3a; --border-soft:#1b222d;
-        --text:#eaecef; --muted:#8a94a3; --faint:#5f6b7a;
-        --green:#0ecb81; --green-dark:#0a9e65; --red:#f6465d; --red-dark:#d93a50;
-        --accent:#f0b90b; --accent-text:#181a20;
+        --bg:#0a0b0e; --panel:#12141a; --panel-2:#181b22; --input-bg:#0d0f13;
+        --border:#262a33; --border-soft:#1b1e25;
+        --text:#e7eaef; --muted:#98a1ae; --faint:#68707d;
+        --green:#17b978; --green-dark:#0f9d66; --red:#e8506b; --red-dark:#d13a55;
+        --accent:#e3a81c; --accent-text:#1c1607;
         --warn-bg:#2a2110; --warn-border:#6b5410; --warn-text:#f5d67b;
         --danger-bg:#2b1419; --danger-border:#7a2436; --danger-text:#ff97a7;
         color-scheme:dark;
@@ -51,8 +51,8 @@
       /* ---------- Top bar ---------- */
       .topbar{
         display:flex; flex-wrap:wrap; align-items:center; gap:14px 22px;
-        background:var(--panel); border:1px solid var(--border); border-radius:10px;
-        padding:10px 14px;
+        background:var(--panel); border:1px solid var(--border); border-radius:12px;
+        padding:10px 14px; box-shadow:0 1px 3px rgba(0,0,0,.18);
       }
       .pair-block{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
       .pair-block select{
@@ -114,7 +114,7 @@
 
       /* ---------- Layout ---------- */
       .layout{ display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px; align-items:start; }
-      .panel{ background:var(--panel); border:1px solid var(--border); border-radius:10px; }
+      .panel{ background:var(--panel); border:1px solid var(--border); border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.18); }
 
       /* ---------- Chart ---------- */
       .chart-head{
@@ -127,28 +127,33 @@
       .chart-change{ font-size:14px; font-weight:700; }
       .chip-row{ display:flex; gap:6px; flex-wrap:wrap; }
       .chip{
-        min-height:36px; padding:0 12px; border-radius:6px; border:1px solid var(--border);
+        min-height:36px; padding:0 14px; border-radius:999px; border:1px solid var(--border);
         background:transparent; color:var(--muted); font-weight:600; font-size:13px;
       }
       .chip.active{ color:var(--accent); border-color:var(--accent); }
       .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
       .chart-wrap{ position:relative; height:460px; }
-      @media (max-width:960px){ .chart-wrap{ height:196px; } }
+      @media (max-width:960px){ .chart-wrap{ height:152px; } }
       #chart{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
       #chart.grabbing{ cursor:grabbing; }
+      /* Bar alat grafik: baris sendiri DI ATAS canvas (bukan melayang di
+         atasnya), jadi tombol zoom / muat ulang dan label jumlah candle
+         tidak pernah menutupi candle maupun label harga di tepi grafik. */
       .chart-tools{
-        position:absolute; top:8px; left:8px; z-index:5; display:flex; gap:6px; align-items:center;
+        display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+        padding:8px 12px; border-bottom:1px solid var(--border-soft);
       }
+      .chart-tools .ct-label{ margin-left:auto; }
       .ct-btn{
-        min-width:38px; min-height:38px; padding:0 10px; border-radius:7px;
+        min-width:38px; min-height:36px; padding:0 12px; border-radius:8px;
         border:1px solid var(--border); background:var(--panel-2); color:var(--text);
-        font-weight:700; font-size:15px; line-height:1; opacity:.92;
+        font-weight:700; font-size:15px; line-height:1;
       }
-      .ct-btn:hover{ border-color:var(--faint); opacity:1; }
+      .ct-btn:hover{ border-color:var(--faint); }
       .ct-btn.wide{ font-size:12px; font-weight:600; }
       .ct-label{
         font-size:11.5px; color:var(--muted); background:var(--panel-2);
-        border:1px solid var(--border-soft); border-radius:6px; padding:5px 8px; opacity:.92;
+        border:1px solid var(--border-soft); border-radius:999px; padding:5px 10px;
       }
       .chart-msg{
         position:absolute; inset:0; display:none; align-items:center; justify-content:center;
@@ -393,7 +398,8 @@
       /* ---------- Menu utama (navigasi tampilan) ---------- */
       .main-nav{
         display:flex; gap:6px; margin-top:10px; padding:5px;
-        background:var(--panel); border:1px solid var(--border); border-radius:11px;
+        background:var(--panel); border:1px solid var(--border); border-radius:12px;
+        box-shadow:0 1px 3px rgba(0,0,0,.18);
       }
       .main-nav button{
         flex:1; min-height:46px; border:0; border-radius:8px; background:transparent;
@@ -504,7 +510,16 @@
         .stat.opt{ display:none; }
         .stat.price .stat-value{ font-size:17px; }
         .chart-price .cp-val{ font-size:20px; }
-        .chart-head{ padding:8px 10px; gap:6px; }
+        .chart-head{ padding:6px 10px; gap:6px; }
+        /* HP: bar alat grafik + chip interval dirampingkan supaya tinggi
+           total section grafik tidak mendorong kepala panel gainer ke
+           belakang bar order yang menempel di tepi bawah layar. */
+        .chart-tools{ padding:4px 10px; gap:5px; }
+        .ct-btn{ min-width:34px; min-height:30px; padding:0 9px; }
+        .ct-label{ padding:3px 8px; }
+        #intervalRow .chip{ min-height:32px; padding:0 10px; font-size:12px; }
+        .ohlc{ padding:6px 10px; }
+        .gainers-panel{ margin-top:6px; }
         .gainers-panel{ padding:12px; }
         .gainers-head h2{ order:0; }
         #btnGainersRefresh{ order:1; margin-left:auto; }
@@ -604,23 +619,25 @@
             </div>
             <span class="chart-status"><span class="dot off" id="wsDot"></span><span id="wsText">Feed: —</span></span>
           </div>
+          <div class="chart-tools">
+            <button type="button" class="ct-btn" id="btnZoomOut" aria-label="Perkecil grafik (zoom out)">−</button>
+            <button type="button" class="ct-btn" id="btnZoomIn" aria-label="Perbesar grafik (zoom in)">+</button>
+            <button type="button" class="ct-btn wide" id="btnZoomReset">Reset</button>
+            <button type="button" class="ct-btn wide" id="btnChartRefresh" title="Muat ulang data grafik & sambung ulang feed harga">↻ Muat Ulang</button>
+            <span class="ct-label" id="zoomLabel">— candle</span>
+          </div>
           <div class="chart-wrap">
             <canvas id="chart"></canvas>
-            <div class="chart-tools">
-              <button type="button" class="ct-btn" id="btnZoomOut" aria-label="Perkecil grafik (zoom out)">−</button>
-              <button type="button" class="ct-btn" id="btnZoomIn" aria-label="Perbesar grafik (zoom in)">+</button>
-              <button type="button" class="ct-btn wide" id="btnZoomReset">Reset</button>
-              <button type="button" class="ct-btn wide" id="btnChartRefresh" title="Muat ulang data grafik & sambung ulang feed harga">↻ Muat Ulang</button>
-              <span class="ct-label" id="zoomLabel">— candle</span>
-            </div>
             <div class="chart-msg" id="chartMsg">Memuat data harga dari Binance…</div>
           </div>
           <div class="ohlc mono" id="ohlcBar">
+            <span><b id="ohTime">—</b></span>
             <span>O <b id="ohO">—</b></span><span>H <b id="ohH">—</b></span>
             <span>L <b id="ohL">—</b></span><span>C <b id="ohC">—</b></span>
+            <span>Perubahan <b id="ohChg">—</b></span>
             <span>Vol <b id="ohV">—</b></span>
-            <span class="hint-long" style="margin-left:auto">Geser grafik untuk menggeser waktu · cubit / scroll mouse / tombol + − untuk zoom · ketuk 2x untuk reset</span>
-            <span class="hint-short">Geser untuk geser waktu · cubit untuk zoom</span>
+            <span class="hint-long" style="margin-left:auto">Ketuk / arahkan kursor ke candle untuk melihat perubahan % · geser untuk menggeser waktu · cubit / scroll mouse / tombol + − untuk zoom · ketuk 2x untuk reset</span>
+            <span class="hint-short">Ketuk candle untuk lihat % · geser / cubit untuk zoom</span>
           </div>
         </section>
 
@@ -1493,6 +1510,17 @@
         $("ohL").textContent = fmtPrice(k.l);
         $("ohC").textContent = fmtPrice(k.c);
         $("ohV").textContent = fmtCompact(k.v);
+        // Perubahan % candle terpilih: hijau "+x,xx%" / merah "−x,xx%",
+        // dihitung dari harga buka ke harga tutup candle itu.
+        var pct = k.o ? ((k.c - k.o) / k.o) * 100 : 0;
+        var chgEl = $("ohChg");
+        chgEl.textContent = (pct >= 0 ? "+" : "−") + Math.abs(pct).toFixed(2).replace(".", ",") + "%";
+        chgEl.className = pct >= 0 ? "up" : "down";
+        var d = new Date(k.t);
+        $("ohTime").textContent = state.interval === "1d"
+          ? d.toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" })
+          : d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }) + " · " +
+            d.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" });
       }
 
       /* ================= Diagnosis koneksi (dites dari browser pengguna) ================= */
@@ -1786,7 +1814,10 @@
         var muted = cssVar("--muted") || "#8a94a3";
         var textCol = cssVar("--text") || "#eaecef";
 
-        function y(p){ return ((max - p) / (max - min)) * priceH; }
+        // Ruang napas di tepi atas/bawah area harga, supaya label harga
+        // tertinggi & terendah tidak terpotong tepi canvas.
+        var topPad = 10;
+        function y(p){ return topPad + ((max - p) / (max - min)) * (priceH - topPad - 3); }
         var stepX = plotW / data.length;
         var bodyW = Math.max(1, Math.floor(stepX * 0.62));
 
@@ -3421,6 +3452,16 @@
             if (pointerCount() === 1){
               dragLastX = e.clientX; dragMoved = false;
               chartCanvas.classList.add("grabbing");
+              // Ketukan (termasuk di HP) langsung memilih candle di titik
+              // itu: crosshair tampil dan bar OHLC menunjukkan perubahan %
+              // candle tersebut.
+              var tp = localPos(e);
+              var ti = pointerIdx(tp.x, tp.w);
+              if (ti >= 0 && state.klines[ti]){
+                state.hoverIdx = ti;
+                renderOhlc(state.klines[ti]);
+                drawChart();
+              }
             } else if (pointerCount() === 2){
               var pts = Object.keys(pointers).map(function(k){ return pointers[k]; });
               pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
@@ -3473,6 +3514,9 @@
           chartCanvas.addEventListener("pointerup", endPointer);
           chartCanvas.addEventListener("pointercancel", endPointer);
           chartCanvas.addEventListener("pointerleave", function(e){
+            // Hanya mouse yang mereset pilihan saat kursor keluar; pilihan
+            // dari ketukan sentuh dibiarkan tampil sampai candle lain diketuk.
+            if (e.pointerType !== "mouse") return;
             if (!pointers[e.pointerId] && state.hoverIdx >= 0){
               state.hoverIdx = -1;
               renderOhlc(state.klines[state.klines.length - 1]);
