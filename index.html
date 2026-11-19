@@ -1686,6 +1686,23 @@
         renderOrders();
         updateEstimates();
       }
+      function posMargin(p){
+        // Margin yang benar-benar dipakai posisi ini. isolatedMargin +
+        // positionInitialMargin kadang 0 di mode cross; kalau begitu hitung
+        // dari nilai posisi dibagi leverage (cara Binance menghitungnya).
+        var m = (parseFloat(p.isolatedMargin) || 0) + (parseFloat(p.positionInitialMargin) || 0);
+        if (!(m > 0)){
+          var amt = Math.abs(parseFloat(p.positionAmt) || 0);
+          var entry = parseFloat(p.entryPrice) || 0;
+          var lev = parseFloat(p.leverage) || 1;
+          m = (amt * entry) / lev;
+        }
+        return m;
+      }
+      function fmtPctSigned(v){
+        if (v == null || isNaN(v)) return "—";
+        return (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
+      }
       function renderPositions(){
         var box = $("posList");
         $("posCount").textContent = state.positions.length ? "(" + state.positions.length + ")" : "";
@@ -1701,6 +1718,13 @@
           var amt = parseFloat(p.positionAmt);
           var long = amt > 0;
           var pnl = parseFloat(p.unRealizedProfit);
+          var entry = parseFloat(p.entryPrice);
+          var mark = parseFloat(p.markPrice);
+          var margin = posMargin(p);
+          var roi = margin > 0 ? (pnl / margin) * 100 : null;
+          // Persen naik/turun harga dari harga masuk ke mark price,
+          // dibalik untuk posisi SHORT (harga turun = untung).
+          var movePct = (entry > 0 && !isNaN(mark)) ? ((mark - entry) / entry) * 100 * (long ? 1 : -1) : null;
           return '<div class="pos-card">' +
             '<div class="pos-top"><span class="pos-sym mono">' + esc(p.symbol) + '</span>' +
             '<span class="side-tag ' + (long ? "long" : "short") + '">' + (long ? "LONG" : "SHORT") + "</span>" +
@@ -1709,11 +1733,12 @@
             '<button type="button" class="btn btn-small btn-danger" data-close="' + i + '">Tutup Posisi</button></div>' +
             '<div class="pos-grid">' +
             '<div><span class="k">Jumlah</span><span class="v mono">' + esc(p.positionAmt) + "</span></div>" +
-            '<div><span class="k">Harga masuk</span><span class="v mono">' + fmtPrice(parseFloat(p.entryPrice)) + "</span></div>" +
-            '<div><span class="k">Mark price</span><span class="v mono">' + fmtPrice(parseFloat(p.markPrice)) + "</span></div>" +
-            '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + " USDT</span></div>" +
+            '<div><span class="k">Harga masuk</span><span class="v mono">' + fmtPrice(entry) + "</span></div>" +
+            '<div><span class="k">Mark price</span><span class="v mono">' + fmtPrice(mark) + "</span></div>" +
+            '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + " USDT (" + fmtPctSigned(roi) + ")</span></div>" +
+            '<div><span class="k">Naik/turun dari harga masuk</span><span class="v mono ' + (movePct >= 0 ? "up" : "down") + '">' + fmtPctSigned(movePct) + "</span></div>" +
             '<div><span class="k">Harga likuidasi</span><span class="v mono">' + fmtPrice(parseFloat(p.liquidationPrice)) + "</span></div>" +
-            '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(parseFloat(p.isolatedMargin) + parseFloat(p.positionInitialMargin || 0)) + " USDT</span></div>" +
+            '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(margin) + " USDT</span></div>" +
             "</div></div>";
         }).join("");
         box.querySelectorAll("[data-close]").forEach(function(btn){
@@ -1962,7 +1987,12 @@
             ["Arah posisi", long ? "LONG" : "SHORT"],
             ["Jumlah", Math.abs(amt) + " " + p.symbol.replace("USDT", "")],
             ["Harga masuk", fmtPrice(parseFloat(p.entryPrice))],
-            ["PnL saat ini", fmtMoney(parseFloat(p.unRealizedProfit)) + " USDT"]
+            ["PnL saat ini", (function(){
+              var cpnl = parseFloat(p.unRealizedProfit);
+              var cmargin = posMargin(p);
+              var croi = cmargin > 0 ? (cpnl / cmargin) * 100 : null;
+              return (cpnl >= 0 ? "+" : "") + fmtMoney(cpnl) + " USDT (" + fmtPctSigned(croi) + ")";
+            })()]
           ],
           sendLabel: "Tutup Posisi",
           danger: true,
