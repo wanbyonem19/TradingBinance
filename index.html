@@ -134,7 +134,22 @@
       .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
       .chart-wrap{ position:relative; height:460px; }
       @media (max-width:960px){ .chart-wrap{ height:340px; } }
-      #chart{ width:100%; height:100%; display:block; }
+      #chart{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+      #chart.grabbing{ cursor:grabbing; }
+      .chart-tools{
+        position:absolute; top:8px; left:8px; z-index:5; display:flex; gap:6px; align-items:center;
+      }
+      .ct-btn{
+        min-width:38px; min-height:38px; padding:0 10px; border-radius:7px;
+        border:1px solid var(--border); background:var(--panel-2); color:var(--text);
+        font-weight:700; font-size:15px; line-height:1; opacity:.92;
+      }
+      .ct-btn:hover{ border-color:var(--faint); opacity:1; }
+      .ct-btn.wide{ font-size:12px; font-weight:600; }
+      .ct-label{
+        font-size:11.5px; color:var(--muted); background:var(--panel-2);
+        border:1px solid var(--border-soft); border-radius:6px; padding:5px 8px; opacity:.92;
+      }
       .chart-msg{
         position:absolute; inset:0; display:none; align-items:center; justify-content:center;
         text-align:center; padding:20px; color:var(--muted); font-size:14px;
@@ -211,6 +226,43 @@
         font-family:"IBM Plex Mono", ui-monospace, monospace;
       }
       .fineprint{ font-size:12px; color:var(--faint); margin-top:10px; }
+
+      /* ---------- Panel order melayang (ala betslip sportsbook) ---------- */
+      .order-head{ display:flex; align-items:center; gap:10px; }
+      .order-head h2{ flex:0 0 auto; }
+      .order-head-sym{ color:var(--muted); font-size:13px; font-weight:600; }
+      .order-toggle{
+        display:none; margin-left:auto; min-height:38px; padding:0 14px; border-radius:7px;
+        border:1px solid var(--accent); background:var(--accent); color:var(--accent-text); font-weight:700;
+      }
+      /* Desktop: panel order jadi sidebar yang menempel (sticky) di kanan grafik,
+         tetap terlihat saat halaman digulir — seperti betslip sportsbook. */
+      @media (min-width:961px){
+        .layout{ grid-template-columns:minmax(0,1fr) 384px; }
+        .order-panel{
+          position:sticky; top:10px; max-height:calc(100vh - 20px); overflow-y:auto;
+          box-shadow:0 12px 32px rgba(0,0,0,.30);
+        }
+        .order-grid{ grid-template-columns:1fr; }
+      }
+      /* HP: panel order melayang sebagai betslip di bagian bawah layar.
+         Ringkas jadi satu bar; ketuk "Buka" untuk memperluas formulir order. */
+      @media (max-width:960px){
+        body{ padding-bottom:70px; }
+        .order-panel{
+          position:fixed; left:8px; right:8px; bottom:8px; z-index:40;
+          padding:8px 12px; max-height:56px; overflow:hidden;
+          box-shadow:0 14px 38px rgba(0,0,0,.55);
+          transition:max-height .25s ease;
+        }
+        .order-panel .order-head h2{ margin:0; }
+        .order-panel.open{ max-height:min(86vh, 760px); overflow-y:auto; padding:14px; }
+        .order-panel:not(.open) .acct-line,
+        .order-panel:not(.open) .order-grid,
+        .order-panel:not(.open) .cap-row,
+        .order-panel:not(.open) .fineprint{ display:none; }
+        .order-toggle{ display:inline-block; }
+      }
 
       /* ---------- Bottom panel ---------- */
       .bottom-panel{ margin-top:10px; }
@@ -427,18 +479,29 @@
           </div>
           <div class="chart-wrap">
             <canvas id="chart"></canvas>
+            <div class="chart-tools">
+              <button type="button" class="ct-btn" id="btnZoomOut" aria-label="Perkecil grafik (zoom out)">−</button>
+              <button type="button" class="ct-btn" id="btnZoomIn" aria-label="Perbesar grafik (zoom in)">+</button>
+              <button type="button" class="ct-btn wide" id="btnZoomReset">Reset</button>
+              <span class="ct-label" id="zoomLabel">— candle</span>
+            </div>
             <div class="chart-msg" id="chartMsg">Memuat data harga dari Binance…</div>
           </div>
           <div class="ohlc mono" id="ohlcBar">
             <span>O <b id="ohO">—</b></span><span>H <b id="ohH">—</b></span>
             <span>L <b id="ohL">—</b></span><span>C <b id="ohC">—</b></span>
             <span>Vol <b id="ohV">—</b></span>
+            <span style="margin-left:auto">Geser grafik untuk menggeser waktu · cubit / scroll mouse / tombol + − untuk zoom · ketuk 2x untuk reset</span>
           </div>
         </section>
 
         <!-- Order panel -->
-        <aside class="panel order-panel" aria-label="Panel order">
-          <h2>Buat Order</h2>
+        <aside class="panel order-panel" id="orderPanel" aria-label="Panel order">
+          <div class="order-head">
+            <h2>Buat Order</h2>
+            <span class="order-head-sym mono" id="orderHeadSym">BTCUSDT</span>
+            <button type="button" class="order-toggle" id="btnOrderToggle" aria-expanded="false">Buka</button>
+          </div>
           <div class="acct-line" id="acctLine">Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.</div>
 
           <div class="order-grid">
@@ -735,6 +798,9 @@
         lastPrice: null,
         markPrice: null,
         klines: [],
+        viewStart: 0,            // indeks candle pertama yang tampil di grafik (zoom/pan)
+        viewCount: 0,            // jumlah candle yang tampil; 0 = semua
+        hoverIdx: -1,            // candle di bawah pointer (crosshair); -1 = tidak ada
         symbolInfo: {},          // symbol -> {stepSize, qtyDecimals, minQty, tickDecimals}
         usdtAvail: null,
         usdtWallet: null,
@@ -1056,6 +1122,7 @@
         state.klines = rows.map(function(r){
           return { t: r[0], o: parseFloat(r[1]), h: parseFloat(r[2]), l: parseFloat(r[3]), c: parseFloat(r[4]), v: parseFloat(r[5]) };
         });
+        resetChartView();
         $("chartMsg").classList.remove("show");
         drawChart();
         renderOhlc(state.klines[state.klines.length - 1]);
@@ -1135,6 +1202,8 @@
         var banner = $("srcBanner");
         if (banner) banner.hidden = !spot;
         $("chartTitle").textContent = state.symbol + (spot ? " · SPOT (cadangan)" : " Perpetual");
+        var ohs = $("orderHeadSym");
+        if (ohs) ohs.textContent = state.symbol;
       }
 
       function renderOhlc(k){
@@ -1350,7 +1419,11 @@
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         ctx.clearRect(0, 0, w, h);
 
-        var data = state.klines;
+        // Jendela tampilan (zoom/pan): hanya candle dalam rentang ini yang digambar.
+        var total = state.klines.length;
+        var vc = state.viewCount > 0 ? Math.min(state.viewCount, total) : total;
+        var vs = Math.max(0, Math.min(state.viewStart, total - vc));
+        var data = state.klines.slice(vs, vs + vc);
         var axisW = 66, axisH = 20;
         var plotW = w - axisW, plotH = h - axisH;
         var volH = Math.round(plotH * 0.14);
@@ -1428,6 +1501,66 @@
           var tx = idx2 * stepX + stepX / 2 - 14;
           ctx.fillText(lbl, Math.max(0, Math.min(tx, plotW - 30)), plotH + 10);
         }
+        // crosshair pada candle yang disentuh / di-hover
+        if (state.hoverIdx >= vs && state.hoverIdx < vs + data.length){
+          var hk = state.klines[state.hoverIdx];
+          var hx = (state.hoverIdx - vs) * stepX + stepX / 2;
+          ctx.strokeStyle = muted; ctx.globalAlpha = 0.65; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(hx, 0); ctx.lineTo(hx, plotH); ctx.stroke();
+          var hy = y(hk.c);
+          ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(plotW, hy); ctx.stroke();
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = textCol;
+          ctx.fillText(fmtPrice(hk.c), plotW + 6, hy - 9);
+        }
+        var zl = $("zoomLabel");
+        if (zl) zl.textContent = data.length + " candle";
+      }
+
+      /* ================= Zoom & geser grafik ================= */
+      var CHART_MIN_VIEW = 12;
+      function resetChartView(){
+        state.viewStart = 0;
+        state.viewCount = 0;
+        state.hoverIdx = -1;
+      }
+      function chartView(){
+        var total = state.klines.length;
+        var vc = state.viewCount > 0 ? Math.min(state.viewCount, total) : total;
+        var vs = Math.max(0, Math.min(state.viewStart, total - vc));
+        return { start: vs, count: vc, total: total };
+      }
+      function setChartView(start, count){
+        var total = state.klines.length;
+        if (!total) return;
+        count = Math.max(CHART_MIN_VIEW, Math.min(count, total));
+        start = Math.max(0, Math.min(Math.round(start), total - count));
+        state.viewStart = start;
+        state.viewCount = count >= total ? 0 : count;
+      }
+      // Zoom dengan titik tumpu di posisi-x pointer (px relatif ke plot).
+      function zoomChartAt(px, factor){
+        var wrap = chartCanvas.parentElement;
+        var plotW = wrap.clientWidth - 66;
+        if (plotW <= 0) return;
+        var v = chartView();
+        var frac = Math.max(0, Math.min(1, px / plotW));
+        var anchor = v.start + frac * v.count;
+        var nc = Math.round(v.count * factor);
+        setChartView(anchor - frac * nc, nc);
+        drawChart();
+      }
+      function zoomChartCenter(factor){
+        var wrap = chartCanvas.parentElement;
+        zoomChartAt((wrap.clientWidth - 66) / 2, factor);
+      }
+      function panChartBy(dxPx){
+        var wrap = chartCanvas.parentElement;
+        var plotW = wrap.clientWidth - 66;
+        var v = chartView();
+        if (plotW <= 0 || v.count >= v.total) return;
+        var shift = Math.round((-dxPx / plotW) * v.count);
+        if (shift) setChartView(v.start + shift, v.count);
       }
 
       /* ================= WebSocket feed ================= */
@@ -1475,10 +1608,23 @@
             var candle = { t: k.t, o: parseFloat(k.o), h: parseFloat(k.h), l: parseFloat(k.l), c: parseFloat(k.c), v: parseFloat(k.v) };
             var last = state.klines[state.klines.length - 1];
             if (last && last.t === candle.t) state.klines[state.klines.length - 1] = candle;
-            else { state.klines.push(candle); if (state.klines.length > 260) state.klines.shift(); }
+            else {
+              // Candle baru: kalau jendela zoom sedang menempel di candle
+              // terakhir, geser ikut maju; kalau pengguna sedang melihat
+              // riwayat lama, jangan diganggu.
+              var vBefore = chartView();
+              var followTail = vBefore.count >= vBefore.total || (vBefore.start + vBefore.count >= vBefore.total);
+              state.klines.push(candle);
+              var dropped = 0;
+              while (state.klines.length > 260){ state.klines.shift(); dropped++; }
+              if (state.viewCount > 0){
+                if (followTail) state.viewStart = state.klines.length - state.viewCount;
+                else state.viewStart = Math.max(0, state.viewStart - dropped);
+              }
+            }
             state.lastPrice = candle.c;
             drawChart();
-            renderOhlc(candle);
+            if (state.hoverIdx < 0) renderOhlc(candle);
             updateEstimates();
           } else if (msg.stream.indexOf("@miniTicker") >= 0){
             state.lastPrice = parseFloat(d.c);
@@ -2268,6 +2414,117 @@
         $("btnRefreshAcct").addEventListener("click", function(){
           if (state.connected) refreshAccount();
           else toast("Belum terhubung — hubungkan API key dulu.");
+        });
+
+        /* ---------- Interaksi grafik: zoom & geser ---------- */
+        (function(){
+          var pointers = {};
+          var dragLastX = null, dragMoved = false, pinchDist = 0;
+
+          function localPos(e){
+            var r = chartCanvas.getBoundingClientRect();
+            return { x: e.clientX - r.left, y: e.clientY - r.top, w: r.width };
+          }
+          function pointerIdx(x, w){
+            var plotW = w - 66;
+            if (plotW <= 0) return -1;
+            var v = chartView();
+            var i = v.start + Math.floor((x / plotW) * v.count);
+            return Math.max(0, Math.min(state.klines.length - 1, i));
+          }
+          function pointerCount(){ return Object.keys(pointers).length; }
+
+          chartCanvas.addEventListener("wheel", function(e){
+            e.preventDefault();
+            var p = localPos(e);
+            zoomChartAt(p.x, e.deltaY < 0 ? 0.82 : 1.22);
+          }, { passive: false });
+
+          chartCanvas.addEventListener("pointerdown", function(e){
+            pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+            try { chartCanvas.setPointerCapture(e.pointerId); } catch (err){}
+            if (pointerCount() === 1){
+              dragLastX = e.clientX; dragMoved = false;
+              chartCanvas.classList.add("grabbing");
+            } else if (pointerCount() === 2){
+              var pts = Object.keys(pointers).map(function(k){ return pointers[k]; });
+              pinchDist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+              dragLastX = null;
+            }
+          });
+          chartCanvas.addEventListener("pointermove", function(e){
+            var p = localPos(e);
+            if (!pointers[e.pointerId]){
+              // Hover tanpa sentuhan (mouse): gerakkan crosshair + OHLC.
+              var hi = pointerIdx(p.x, p.w);
+              if (hi !== state.hoverIdx){
+                state.hoverIdx = hi;
+                if (hi >= 0 && state.klines[hi]) renderOhlc(state.klines[hi]);
+                drawChart();
+              }
+              return;
+            }
+            pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+            if (pointerCount() === 2){
+              var pts = Object.keys(pointers).map(function(k){ return pointers[k]; });
+              var nd = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+              if (pinchDist > 0 && nd > 0){
+                var midX = (pts[0].x + pts[1].x) / 2 - chartCanvas.getBoundingClientRect().left;
+                zoomChartAt(midX, pinchDist / nd);
+              }
+              pinchDist = nd;
+              return;
+            }
+            if (dragLastX != null){
+              var dx = e.clientX - dragLastX;
+              if (Math.abs(e.clientX - (dragLastX)) > 0 && Math.abs(dx) >= 1){
+                panChartBy(dx);
+                dragMoved = true;
+                drawChart();
+              }
+              dragLastX = e.clientX;
+              // Sentuhan 1 jari sambil menggeser: crosshair ikut.
+              var hi2 = pointerIdx(p.x, p.w);
+              if (hi2 >= 0 && state.klines[hi2]){ state.hoverIdx = hi2; renderOhlc(state.klines[hi2]); }
+            }
+          });
+          function endPointer(e){
+            delete pointers[e.pointerId];
+            if (!pointerCount()){
+              dragLastX = null; pinchDist = 0;
+              chartCanvas.classList.remove("grabbing");
+            }
+          }
+          chartCanvas.addEventListener("pointerup", endPointer);
+          chartCanvas.addEventListener("pointercancel", endPointer);
+          chartCanvas.addEventListener("pointerleave", function(e){
+            if (!pointers[e.pointerId] && state.hoverIdx >= 0){
+              state.hoverIdx = -1;
+              renderOhlc(state.klines[state.klines.length - 1]);
+              drawChart();
+            }
+          });
+          chartCanvas.addEventListener("dblclick", function(){
+            resetChartView();
+            renderOhlc(state.klines[state.klines.length - 1]);
+            drawChart();
+          });
+
+          $("btnZoomIn").addEventListener("click", function(){ zoomChartCenter(0.65); });
+          $("btnZoomOut").addEventListener("click", function(){ zoomChartCenter(1.55); });
+          $("btnZoomReset").addEventListener("click", function(){
+            resetChartView();
+            renderOhlc(state.klines[state.klines.length - 1]);
+            drawChart();
+          });
+        })();
+
+        /* ---------- Panel order melayang: buka/tutup di HP ---------- */
+        $("btnOrderToggle").addEventListener("click", function(){
+          var panel = $("orderPanel");
+          var open = panel.classList.toggle("open");
+          this.textContent = open ? "Tutup" : "Buka";
+          this.setAttribute("aria-expanded", open ? "true" : "false");
         });
 
         var resizeTimer = null;
