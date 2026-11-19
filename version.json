@@ -1,0 +1,9 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0",
+  "apkUrl": "https://raw.githubusercontent.com/wanbyonem19/TradingBinance/main/futures-ringan.apk",
+  "changelog": "Versi pertama aplikasi Futures Ringan — login tersimpan, update otomatis, tampilan elegan.",
+  "changelog_id": "Versi pertama aplikasi Futures Ringan — login tersimpan, update otomatis, tampilan elegan.",
+  "changelog_en": "First release of the Futures Ringan app — saved login, auto-update, elegant design.",
+  "mandatory": false
+}
