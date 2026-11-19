@@ -595,6 +595,11 @@
         <b>Menampilkan harga SPOT (cadangan).</b> Semua alamat API Futures Mainnet Binance gagal dijangkau dari browser ini, jadi harga, grafik, dan top gainer diisi dari data spot publik Binance (data-api.binance.vision) supaya tetap terisi — harga spot bisa sedikit berbeda dari harga futures, dan mark price / funding rate tidak tersedia di mode ini. Pasangan futures-only yang tidak punya pasar spot (mis. EVAA) tidak bisa tampil di mode ini. Order tetap hanya dikirim ke API Futures. Rincian alamat mana yang gagal ada di panel Diagnosis Koneksi di bawah.
       </div>
 
+      <!-- Banner saat Binance memblokir IP pengguna sementara (rate-limit -1003) -->
+      <div class="alert alert-danger" id="banBanner" hidden style="margin-top:10px">
+        <b>IP kamu sedang diblokir sementara oleh Binance</b> — <span id="banText"></span>
+      </div>
+
       <!-- ======================= MENU UTAMA ======================= -->
       <nav class="main-nav" aria-label="Menu utama">
         <button type="button" class="active" id="navTerminal" data-view="terminal"><span class="nav-dot"></span>Terminal Trading</button>
@@ -1074,6 +1079,7 @@
         gainersExpanded: false,
         dataSource: "futures",   // "futures" | "spot" — sumber data harga/grafik yang sedang tampil
         futuresDownUntil: 0,     // selama timestamp ini, futures dianggap tak terjangkau (langsung pakai spot)
+        banUntil: 0,             // timestamp berakhirnya blokir rate-limit Binance (-1003); selama aktif semua permintaan REST ditahan
         spotHostIdx: 0,
         symbolsFromSpot: false,
         incomeDaily: {},         // "YYYY-MM-DD" (waktu lokal perangkat) -> { realized, grossProfit, grossLoss, funding, commission, other, net, trades }
@@ -1182,6 +1188,11 @@
               err.status = r.status;
               err.code = body && body.code != null ? body.code : null;
               err.binanceMsg = bmsg;
+              // Binance menjawab = host terjangkau. Error 4xx (simbol tidak
+              // valid, blokir rate-limit, batasan wilayah) akan dijawab sama
+              // oleh semua host — jangan gandakan permintaan ke host lain.
+              err.noFailover = r.status < 500;
+              noteBan(err);
               throw err;
             });
           }
@@ -1195,6 +1206,95 @@
       function isNetworkError(e){
         return !(e && e.status);
       }
+      /* ================= Blokir rate-limit Binance (-1003) ================= */
+      // Binance memblokir sementara IP yang mengirim terlalu banyak
+      // permintaan REST: error -1003 "Way too many requests; IP(x) banned
+      // until <ms epoch>". IP yang sama sering dipakai bersama (NAT operator
+      // seluler), jadi anggaran permintaannya cepat habis — dan halaman ini
+      // dulu ikut memperparah: host yang gagal dicoba bergantian sampai 5
+      // alamat, polling cadangan menembak tiap 3 detik, dan ticker gainer
+      // semua pasangan (bobot 80) ditarik tiap 10 detik. Sekarang: begitu
+      // ban terdeteksi, SEMUA permintaan ke Binance ditahan sampai blokir
+      // berakhir (banner + hitung mundur tampil), lalu halaman menyambung
+      // lagi sendiri. Menekan Hubungkan / memuat ulang berulang-ulang
+      // selama ban justru bisa memperpanjang blokirnya.
+      var banUiTimer = null;
+      function isBanned(){ return !!(state.banUntil && Date.now() < state.banUntil); }
+      function fmtBanTime(ts){
+        return new Date(ts).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+      function banError(){
+        var e = new Error("IP sedang diblokir Binance sampai " + fmtBanTime(state.banUntil) + " WIB — permintaan ditahan halaman ini supaya blokirnya tidak bertambah lama.");
+        e.code = -1003;
+        return e;
+      }
+      function banBannerText(){
+        var left = Math.max(0, state.banUntil - Date.now());
+        var s = Math.ceil(left / 1000);
+        var mm = Math.floor(s / 60), ss = s % 60;
+        var sisa = (mm > 0 ? mm + " menit " : "") + ss + " detik";
+        return "penyebabnya terlalu banyak permintaan data ke Binance dalam waktu singkat (Binance membatasi jumlah permintaan per alamat IP, dan IP operator seluler biasanya dipakai bersama banyak orang). Halaman ini sudah menghentikan semua permintaannya ke Binance dan akan menyambung lagi sendiri setelah blokir berakhir — sekitar " + sisa + " lagi (pukul " + fmtBanTime(state.banUntil) + " WIB). Jangan memuat ulang halaman atau menekan Hubungkan berulang-ulang: itu tidak mempercepat blokir, malah bisa memperpanjangnya.";
+      }
+      function noteBan(err){
+        if (!err) return false;
+        var msg = String(err.message || "");
+        var m = msg.match(/banned until (\d{10,})/i);
+        if (!(err.code === -1003 || m || /way too many requests/i.test(msg))) return false;
+        var until = m ? Number(m[1]) : 0;
+        if (!until || until < Date.now()) until = Date.now() + 5 * 60 * 1000;
+        if (until > (state.banUntil || 0)){
+          state.banUntil = until;
+          addLog("Binance memblokir IP ini sementara (terlalu banyak permintaan) sampai " + fmtBanTime(until) + " WIB. Semua permintaan halaman ke Binance dihentikan sampai blokir berakhir.", "err");
+        }
+        applyBanState();
+        return true;
+      }
+      function applyBanState(){
+        var banner = $("banBanner");
+        if (!isBanned()){
+          if (banner) banner.hidden = true;
+          if (banUiTimer){ clearInterval(banUiTimer); banUiTimer = null; }
+          return;
+        }
+        // Hentikan semua lalu lintas berkala; WebSocket juga ditutup supaya
+        // tidak ada sambung-ulang yang memicu permintaan baru selama ban.
+        stopPolling();
+        if (state.acctTimer){ clearInterval(state.acctTimer); state.acctTimer = null; }
+        if (state.wsReconnectTimer){ clearTimeout(state.wsReconnectTimer); state.wsReconnectTimer = null; }
+        if (state.ws){
+          state.wsGen++;
+          try { state.ws.close(); } catch (e){}
+          state.ws = null;
+          state.wsAlive = false;
+        }
+        setFeed("off", "Diblokir Binance sementara — menunggu blokir berakhir…");
+        if (banner){
+          banner.hidden = false;
+          $("banText").textContent = banBannerText();
+        }
+        if (!banUiTimer){
+          banUiTimer = setInterval(function(){
+            if (!isBanned()){
+              clearInterval(banUiTimer); banUiTimer = null;
+              state.banUntil = 0;
+              applyBanState();
+              addLog("Blokir rate-limit Binance berakhir — halaman menyambung ulang data seperti biasa.", "ok");
+              toast("Blokir Binance berakhir — data menyambung lagi.", "ok");
+              loadTicker().catch(function(){});
+              loadKlines();
+              connectWs();
+              loadGainers(true, true);
+              if (state.connected){
+                refreshAccount();
+                if (!state.acctTimer) state.acctTimer = setInterval(refreshAccount, 15000);
+              }
+              return;
+            }
+            var b = $("banBanner");
+            if (b && !b.hidden) $("banText").textContent = banBannerText();
+          }, 1000);
+        }
+      }
       // Catatan hasil terakhir tiap host — ditampilkan apa adanya di panel
       // Diagnosis Koneksi supaya pengguna bisa melihat host mana yang gagal.
       var hostDiag = {}; // host -> { ok, msg, at }
@@ -1205,11 +1305,15 @@
       // Coba daftar host satu per satu (mulai dari yang terakhir berhasil)
       // sampai ada yang menjawab. Tiap hasil dicatat untuk diagnosis.
       function tryHostList(hosts, startIdx, path, onPick){
+        if (isBanned()) return Promise.reject(banError());
         var order = [];
         for (var i = 0; i < hosts.length; i++) order.push((startIdx + i) % hosts.length);
         var p = Promise.reject(new Error("belum dicoba"));
         order.forEach(function(hi){
-          p = p.catch(function(){
+          p = p.catch(function(prevErr){
+            // Error HTTP 4xx dari Binance: host-nya terjangkau dan host lain
+            // akan menjawab sama persis — berhenti, jangan gandakan beban.
+            if (prevErr && prevErr.noFailover) throw prevErr;
             return fetchJsonFrom(hosts[hi], path).then(function(data){
               noteHost(hosts[hi], true, "OK");
               if (onPick) onPick(hi);
@@ -1432,6 +1536,11 @@
             applyKlines(rows);
           })
           .catch(function(fErr){
+            if (isBanned()){
+              $("chartMsg").textContent = "Grafik berhenti sementara: IP diblokir Binance sampai " + fmtBanTime(state.banUntil) + " WIB karena terlalu banyak permintaan. Grafik dimuat lagi sendiri setelah blokir berakhir — jangan memuat ulang halaman berulang-ulang.";
+              $("chartMsg").classList.add("show");
+              return;
+            }
             if (!isNetworkError(fErr)){
               // Binance menjawab tapi menolak (mis. HTTP 400 "Invalid
               // symbol"): pasangan ini tidak terdaftar di Futures Mainnet.
@@ -1564,6 +1673,9 @@
       var diagRunning = false;
       function runDiagnostics(){
         if (diagRunning) return Promise.resolve();
+        // Selama blokir rate-limit aktif, tes koneksi (11 alamat sekaligus)
+        // hanya akan menambah beban ke IP yang sedang diblokir.
+        if (isBanned()){ renderDiagList(); return Promise.resolve(); }
         diagRunning = true;
         renderDiagList();
         var jobs = diagEndpoints().map(function(r){
@@ -1605,6 +1717,7 @@
         return range;
       }
       function loadGainers(force, silent){
+        if (isBanned()) return Promise.resolve();
         var range = currentGainerRange();
         var cache = state.gainersCache[range.id];
         if (!force && cache && (Date.now() - cache.at) < 60000){
@@ -1642,6 +1755,10 @@
             return fetchRangeChanges(cands, range, src).then(function(list){ finish(list, src); });
           })
           .catch(function(e){
+            if (isBanned()){
+              if (!silent) body.innerHTML = '<div class="empty">Daftar gainer berhenti sementara: IP diblokir Binance sampai ' + esc(fmtBanTime(state.banUntil)) + ' WIB (terlalu banyak permintaan). Daftar dimuat lagi sendiri setelah blokir berakhir.</div>';
+              return;
+            }
             // Pembaruan otomatis yang gagal tidak mengosongkan daftar yang
             // sedang tampil — angka terakhir tetap terlihat dan putaran
             // berikutnya mencoba lagi sendiri.
@@ -1660,11 +1777,11 @@
       // Putaran harga gainer: SATU permintaan ticker untuk semua pasangan,
       // lalu harga (& urutan peringkat) baris yang sedang tampil diperbarui
       // di tempat. Inilah yang membuat daftar gainer bergerak mengikuti
-      // pasar tiap ±10 detik tanpa menunggu hitungan penuh dan tanpa
+      // pasar tiap ±30 detik tanpa menunggu hitungan penuh dan tanpa
       // tombol Muat Ulang. Hitungan penuh (termasuk kline rentang pendek)
       // tetap jalan berkala lewat loadGainers senyap.
       function tickGainers(){
-        if (document.hidden || state.gainersBusy) return;
+        if (document.hidden || state.gainersBusy || isBanned()) return;
         var range = currentGainerRange();
         var cache = state.gainersCache[range.id];
         if (!cache || !cache.rows || !cache.rows.length) return;
@@ -1998,15 +2115,17 @@
         }).catch(function(){});
       }
       function pollTick(){
-        if (document.hidden) return;
+        if (document.hidden || isBanned()) return;
         loadTicker().catch(function(){});
         pollKlinesTail();
       }
       function startPolling(){
-        if (state.pollTimer) return;
+        if (state.pollTimer || isBanned()) return;
         setFeed("poll", "Polling otomatis (cadangan)");
         pollTick();
-        state.pollTimer = setInterval(pollTick, 3000);
+        // 5 detik (bukan 3): polling ini cuma cadangan saat WebSocket putus,
+        // dan Binance memblokir IP yang terlalu rajin meminta data REST.
+        state.pollTimer = setInterval(pollTick, 5000);
       }
       function scheduleWsReconnect(){
         if (state.wsReconnectTimer) return;
@@ -2019,6 +2138,7 @@
         }, delay);
       }
       function connectWs(){
+        if (isBanned()){ applyBanState(); return; }
         state.wsGen++;
         var gen = state.wsGen;
         if (state.wsReconnectTimer){ clearTimeout(state.wsReconnectTimer); state.wsReconnectTimer = null; }
@@ -2089,6 +2209,7 @@
       function startFeedWatchdog(){
         setInterval(function(){
           if (document.hidden) return;
+          if (isBanned()) return;
           if (state.wsAlive){
             if (state.lastWsMsgAt && Date.now() - state.lastWsMsgAt > 12000){
               var dead = state.ws;
@@ -2243,6 +2364,7 @@
       }
       function signedRequest(method, path, params){
         if (!state.keys) return Promise.reject(new Error("API key belum terhubung."));
+        if (isBanned()) return Promise.reject(banError());
         params = params || {};
         params.timestamp = Date.now() + state.timeOffset;
         params.recvWindow = 5000;
@@ -2259,6 +2381,7 @@
                 if (!r.ok){
                   var err = new Error(body && body.msg ? body.msg : ("HTTP " + r.status));
                   err.code = body && body.code;
+                  noteBan(err);
                   throw err;
                 }
                 return body;
@@ -2284,7 +2407,7 @@
 
       /* ================= Account data ================= */
       function refreshAccount(){
-        if (!state.connected || !state.keys) return Promise.resolve();
+        if (!state.connected || !state.keys || isBanned()) return Promise.resolve();
         return Promise.all([
           signedRequest("GET", "/fapi/v2/balance", {}),
           signedRequest("GET", "/fapi/v2/positionRisk", {}),
@@ -3158,6 +3281,10 @@
         var secret = $("apiSecretInput").value.trim();
         var errEl = $("apiErr");
         if (!apiKey || !secret){ errEl.textContent = "Isi API key dan secret key dulu."; return; }
+        if (isBanned()){
+          errEl.textContent = "IP kamu sedang diblokir Binance sampai " + fmtBanTime(state.banUntil) + " WIB karena terlalu banyak permintaan. Tunggu blokirnya berakhir — menekan Hubungkan sekarang hanya akan ditolak lagi dan bisa memperpanjang blokir. Setelah itu coba sekali saja.";
+          return;
+        }
         if (state.connecting) return;
         state.connecting = true;
         $("btnConnect").disabled = true;
@@ -3193,6 +3320,7 @@
           $("btnConnect").textContent = "Hubungkan";
           var hint = "";
           if (e.code === -2015) hint = " Cek lagi key-nya: pastikan benar, izin Futures aktif, dan (kalau dibatasi IP) IP kamu sudah terdaftar.";
+          else if (e.code === -1003) hint = " Ini BUKAN salah key kamu: Binance memblokir alamat IP ini sementara karena terlalu banyak permintaan data. Tunggu sampai " + fmtBanTime(state.banUntil || Date.now()) + " WIB (lihat banner merah di atas halaman), jangan menekan Hubungkan berulang-ulang karena bisa memperpanjang blokir, lalu coba sekali lagi.";
           else if (e.code === -1021) hint = " Jam perangkat kamu berbeda jauh dari server Binance — sinkronkan jam perangkat lalu coba lagi.";
           errEl.textContent = "Gagal terhubung: " + e.message + hint;
           addLog("Gagal menghubungkan API key: " + e.message, "err");
@@ -3266,10 +3394,12 @@
         $("btnDiag").addEventListener("click", function(){ runDiagnostics(); });
         loadGainers(false);
         // Gainer bergerak sendiri: harga & peringkat diperbarui di tempat
-        // tiap 10 detik (satu permintaan ticker untuk semua pasangan),
-        // dan hitungan penuh diulang senyap tiap 60 detik — tanpa perlu
+        // tiap 30 detik (satu permintaan ticker untuk semua pasangan —
+        // permintaan ini berbobot besar di Binance, jadi tidak lebih sering
+        // dari ini supaya IP pengguna tidak kena blokir rate-limit), dan
+        // hitungan penuh diulang senyap tiap 60 detik — tanpa perlu
         // menekan Muat Ulang dan tanpa mengosongkan daftar.
-        setInterval(function(){ tickGainers(); }, 10000);
+        setInterval(function(){ tickGainers(); }, 30000);
         setInterval(function(){ loadGainers(true, true); }, 60000);
 
         $("btnApi").addEventListener("click", openApiModal);
