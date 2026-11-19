@@ -132,7 +132,7 @@
       }
       .chip.active{ color:var(--accent); border-color:var(--accent); }
       .chart-status{ margin-left:auto; font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
-      .chart-wrap{ position:relative; height:460px; }
+      .chart-wrap{ position:relative; height:460px; overflow:hidden; }
       @media (max-width:960px){ .chart-wrap{ height:152px; } }
       #chart{ width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
       #chart.grabbing{ cursor:grabbing; }
@@ -142,6 +142,7 @@
       .chart-tools{
         display:flex; gap:6px; align-items:center; flex-wrap:wrap;
         padding:8px 12px; border-bottom:1px solid var(--border-soft);
+        background:var(--panel); position:relative; z-index:3; flex:none;
       }
       .chart-tools .ct-label{ margin-left:auto; }
       .ct-btn{
@@ -1814,10 +1815,11 @@
         var muted = cssVar("--muted") || "#8a94a3";
         var textCol = cssVar("--text") || "#eaecef";
 
-        // Ruang napas di tepi atas/bawah area harga, supaya label harga
-        // tertinggi & terendah tidak terpotong tepi canvas.
-        var topPad = 10;
-        function y(p){ return topPad + ((max - p) / (max - min)) * (priceH - topPad - 3); }
+        // Ruang napas di tepi atas/bawah area harga, supaya candle tertinggi
+        // dan label harga paling atas selalu utuh di dalam canvas — tidak
+        // mepet, tidak terpotong, dan tidak naik ke bar alat di atasnya.
+        var topPad = 16;
+        function y(p){ return topPad + ((max - p) / (max - min)) * (priceH - topPad - 6); }
         var stepX = plotW / data.length;
         var bodyW = Math.max(1, Math.floor(stepX * 0.62));
 
@@ -1859,7 +1861,7 @@
           ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(plotW, ly); ctx.stroke();
           ctx.setLineDash([]); ctx.globalAlpha = 1;
           ctx.fillStyle = textCol;
-          ctx.fillText(fmtPrice(state.lastPrice), plotW + 6, ly - 9);
+          ctx.fillText(fmtPrice(state.lastPrice), plotW + 6, Math.max(9, ly - 9));
         }
         // time labels
         ctx.fillStyle = muted;
@@ -1883,7 +1885,7 @@
           ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(plotW, hy); ctx.stroke();
           ctx.globalAlpha = 1;
           ctx.fillStyle = textCol;
-          ctx.fillText(fmtPrice(hk.c), plotW + 6, hy - 9);
+          ctx.fillText(fmtPrice(hk.c), plotW + 6, Math.max(9, hy - 9));
         }
         var zl = $("zoomLabel");
         if (zl) zl.textContent = data.length + " candle";
