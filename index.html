@@ -473,6 +473,22 @@
       .calc-result{ font-size:12.5px; margin-top:10px; line-height:1.6; }
       .calc-result b{ font-size:13.5px; }
 
+      /* ---------- Sinyal & Analisis Indikator ---------- */
+      .signal-panel{ margin-top:10px; padding:14px; }
+      .signal-head{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:4px; }
+      .signal-head h2{ font-size:15px; margin:0; }
+      .signal-meta{ font-size:12px; color:var(--muted); }
+      .sig-dir{ margin-left:auto; font-size:13px; font-weight:700; padding:5px 12px; border-radius:999px; border:1px solid var(--border); background:var(--panel-2); }
+      .sig-dir.up{ color:var(--green); border-color:var(--green); }
+      .sig-dir.down{ color:var(--red); border-color:var(--red); }
+      .sig-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(215px,1fr)); gap:8px; margin-top:10px; }
+      .sig-item{ background:var(--panel-2); border:1px solid var(--border-soft); border-radius:9px; padding:9px 11px; font-size:12.5px; }
+      .sig-item .k{ display:block; font-size:11px; color:var(--muted); font-weight:600; margin-bottom:3px; }
+      .sig-item .v{ display:block; font-size:14.5px; font-weight:700; }
+      .sig-item .s{ display:block; font-size:11.5px; color:var(--muted); margin-top:2px; line-height:1.45; }
+      .sig-note{ font-size:12px; color:var(--muted); line-height:1.55; margin:12px 0 0; border-top:1px solid var(--border-soft); padding-top:10px; }
+      .sig-note b{ color:var(--text); }
+
       /* ---------- Diagnosis koneksi ---------- */
       .diag-panel{ margin-top:10px; padding:14px; }
       .diag-head{ display:flex; align-items:center; gap:10px; margin-bottom:6px; }
@@ -582,6 +598,10 @@
             <span class="stat-label">Funding rate</span>
             <span class="stat-value mono" id="stFunding">—</span>
           </div>
+          <div class="stat opt">
+            <span class="stat-label">Funding berikutnya</span>
+            <span class="stat-value mono" id="stFundingCd">—</span>
+          </div>
         </div>
 
         <div class="conn">
@@ -658,7 +678,7 @@
             <span class="order-head-price mono" id="orderHeadPrice">—</span>
             <button type="button" class="order-toggle" id="btnOrderToggle" aria-expanded="false">Buka</button>
           </div>
-          <div class="acct-line" id="acctLine">Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.</div>
+          <div class="acct-line" id="acctLine"><b>Mode lihat</b> — harga, grafik, top gainer, dan Sinyal &amp; Analisis tampil penuh tanpa login. Hubungkan API key untuk order.</div>
 
           <div class="order-grid">
           <div class="order-col">
@@ -763,6 +783,29 @@
         </div>
         <div id="gainersBody"><div class="empty">Memuat daftar top gainer…</div></div>
         <p class="gainers-note" id="gainersNote"></p>
+      </section>
+
+      <!-- ======================= SINYAL & ANALISIS ======================= -->
+      <section class="panel signal-panel" aria-label="Sinyal dan analisis indikator">
+        <div class="signal-head">
+          <h2>Sinyal &amp; Analisis Indikator</h2>
+          <span class="signal-meta mono" id="sigMeta">—</span>
+          <span class="sig-dir mono" id="sigDir">Menunggu data…</span>
+        </div>
+        <div class="sig-grid">
+          <div class="sig-item"><span class="k">ARAH KESELURUHAN</span><span class="v mono" id="sigScore">—</span><span class="s">Gabungan suara RSI, tren EMA, MACD, Bollinger Band, dan volume dari candle grafik di atas.</span></div>
+          <div class="sig-item"><span class="k">RSI (14)</span><span class="v mono" id="sigRsi">—</span><span class="s" id="sigRsiNote">Di atas 70 = jenuh beli, di bawah 30 = jenuh jual.</span></div>
+          <div class="sig-item"><span class="k">TREN EMA 20 / 50</span><span class="v mono" id="sigTrend">—</span><span class="s mono" id="sigTrendNote">—</span></div>
+          <div class="sig-item"><span class="k">MACD (12·26·9)</span><span class="v mono" id="sigMacd">—</span><span class="s" id="sigMacdNote">Histogram positif = momentum condong naik.</span></div>
+          <div class="sig-item"><span class="k">BOLLINGER BAND (20, 2σ)</span><span class="v mono" id="sigBb">—</span><span class="s mono" id="sigBbNote">—</span></div>
+          <div class="sig-item"><span class="k">VOLUME CANDLE TERAKHIR</span><span class="v mono" id="sigVol">—</span><span class="s" id="sigVolNote">Dibanding rata-rata 20 candle sebelumnya.</span></div>
+          <div class="sig-item"><span class="k">SUPPORT / RESISTANCE (50 CANDLE)</span><span class="v mono" id="sigSr">—</span><span class="s">Dari harga terendah &amp; tertinggi 50 candle terakhir — level acuan, bukan garis pasti.</span></div>
+          <div class="sig-item"><span class="k">ATR (14) &amp; ACUAN SL / TP</span><span class="v mono" id="sigAtr">—</span><span class="s mono" id="sigAtrNote">—</span></div>
+          <div class="sig-item" id="sigLsItem" hidden><span class="k">RASIO LONG / SHORT (AKUN GLOBAL)</span><span class="v mono" id="sigLs">—</span><span class="s">Data publik futures untuk pasangan yang sedang dibuka.</span></div>
+          <div class="sig-item" id="sigOiItem" hidden><span class="k">OPEN INTEREST</span><span class="v mono" id="sigOi">—</span><span class="s">Jumlah kontrak futures yang sedang terbuka untuk pasangan ini.</span></div>
+          <div class="sig-item" id="sigBookItem" hidden><span class="k">ORDER BOOK — BID / ASK TERBAIK</span><span class="v mono" id="sigBook">—</span><span class="s mono" id="sigBookNote">—</span></div>
+        </div>
+        <p class="sig-note"><b>Jujur soal sinyal:</b> panel ini hanya alat bantu membaca arah dari data harga masa lalu — dihitung langsung di halaman ini dari candle grafik yang sudah dimuat, tanpa server tambahan dan tanpa API key. <b>Sinyal ini BUKAN jaminan menang.</b> Tidak ada indikator — dan tidak ada “AI” — yang bisa membuat trading selalu menang: harga bisa berbalik kapan saja dan sinyal yang terlihat bagus tetap bisa salah. Pakai panel ini sebagai bahan pertimbangan saja, selalu bersama batas rugi harian, stop loss, dan ukuran posisi kecil dari menu Risiko &amp; Keuntungan. Panel ini tidak mengisi dan tidak mengirim order apa pun secara otomatis.</p>
       </section>
 
       <!-- ======================= BOTTOM ======================= -->
@@ -890,12 +933,13 @@
           <h2>Diagnosis Koneksi</h2>
           <button type="button" class="btn btn-small" id="btnDiag">Tes Ulang</button>
         </div>
+        <p class="diag-note" id="diagActive">Jalur data yang sedang dipakai halaman: memeriksa…</p>
         <p class="diag-note">Hasil tes langsung dari browser kamu ke tiap alamat data Binance, diperbarui setiap ada permintaan data. <b>“Failed to fetch”</b> berarti alamat itu tidak terjangkau dari browser/jaringan ini — diblokir jaringan atau tidak mengizinkan akses lintas-origin (CORS) — <b>bukan</b> karena kamu belum login: harga dan grafik adalah data publik yang tidak butuh API key. Aplikasi Binance bisa tetap berfungsi karena memakai jalur koneksinya sendiri di luar browser.</p>
         <div id="diagList"><div class="empty">Mengetes koneksi…</div></div>
       </section>
 
       <footer class="panel foot">
-        <p><b>Cara kerja halaman ini:</b> harga dan grafik selalu diambil dari API publik <b>Futures Mainnet</b> Binance (fapi.binance.com, lalu cadangan fapi1–fapi4) — pasar aslinya — dan <b>order serta data akun</b> juga dikirim ke Futures Mainnet. Alamat www.binance.com/fapi tidak dipakai — dari browser di luar situs Binance alamat itu tidak melayani data futures dan tidak memberi izin lintas-origin, jadi fetch selalu gagal. Kalau semua alamat futures tetap tidak terjangkau dari browser kamu, halaman otomatis menampilkan harga &amp; grafik SPOT Binance dari data-api.binance.vision sebagai cadangan, selalu diberi label “SPOT (cadangan)” — kecuali pasangan futures-only yang memang tidak punya pasar spot, yang grafiknya hanya bisa tampil saat API Futures terjangkau; panel Diagnosis Koneksi di atas menunjukkan alamat mana yang terjangkau dan mana yang gagal dari browser kamu. Daftar pasangan di pemilih adalah daftar lengkap perpetual USDT (570 pasangan) yang tertanam di dalam halaman ini — dibekukan dari data Binance Futures per 19 November 2026 dan termasuk EVAAUSDT — jadi tetap lengkap dan bisa dicari lewat kotak pencarian walau semua API Binance gagal; simbol yang lebih baru ditambahkan otomatis saat exchangeInfo futures terjangkau. Order ditandatangani di browser kamu dan dikirim langsung dari browser ke Binance — tidak lewat server lain. API key hanya disimpan di memori halaman selama halaman terbuka; key hilang begitu halaman ditutup atau dimuat ulang, dan tidak pernah dikirim ke siapa pun selain Binance.</p>
+        <p><b>Cara kerja halaman ini:</b> harga dan grafik selalu diambil dari API publik <b>Futures Mainnet</b> Binance (fapi.binance.com, lalu cadangan fapi1–fapi4) — pasar aslinya — dan <b>order serta data akun</b> juga dikirim ke Futures Mainnet. Alamat www.binance.com/fapi tidak dipakai — dari browser di luar situs Binance alamat itu tidak melayani data futures dan tidak memberi izin lintas-origin, jadi fetch selalu gagal. Kalau semua alamat futures tetap tidak terjangkau dari browser kamu, halaman otomatis menampilkan harga &amp; grafik SPOT Binance dari data-api.binance.vision sebagai cadangan, selalu diberi label “SPOT (cadangan)” — kecuali pasangan futures-only yang memang tidak punya pasar spot, yang grafiknya hanya bisa tampil saat API Futures terjangkau; panel Diagnosis Koneksi di atas menunjukkan alamat mana yang terjangkau dan mana yang gagal dari browser kamu. Daftar pasangan di pemilih adalah daftar lengkap perpetual USDT (570 pasangan) yang tertanam di dalam halaman ini — dibekukan dari data Binance Futures per 19 November 2026 dan termasuk EVAAUSDT — jadi tetap lengkap dan bisa dicari lewat kotak pencarian walau semua API Binance gagal; simbol yang lebih baru ditambahkan otomatis saat exchangeInfo futures terjangkau. Panel Sinyal &amp; Analisis Indikator dihitung langsung di browser dari candle grafik yang sudah dimuat (RSI, EMA, MACD, Bollinger, ATR) ditambah data publik futures (rasio long/short, open interest, order book) — semuanya tanpa API key, dan panel itu tidak pernah mengirim order. Order ditandatangani di browser kamu dan dikirim langsung dari browser ke Binance — tidak lewat server lain. API key hanya disimpan di memori halaman selama halaman terbuka; key hilang begitu halaman ditutup atau dimuat ulang, dan tidak pernah dikirim ke siapa pun selain Binance.</p>
         <p><b>Risiko:</b> trading futures berleverage bisa menghapus seluruh margin kamu dalam hitungan menit. Halaman ini hanya terhubung ke Mainnet — semua order memakai uang asli. Mulai dari nominal kecil dan leverage rendah, dan jangan pernah memakai key dengan izin withdraw.</p>
       </footer>
     </div>
@@ -1080,6 +1124,8 @@
         dataSource: "futures",   // "futures" | "spot" — sumber data harga/grafik yang sedang tampil
         futuresDownUntil: 0,     // selama timestamp ini, futures dianggap tak terjangkau (langsung pakai spot)
         banUntil: 0,             // timestamp berakhirnya blokir rate-limit Binance (-1003); selama aktif semua permintaan REST ditahan
+        nextFundingTime: 0,      // waktu funding berikutnya (dari premiumIndex / markPrice stream) untuk hitung mundur
+        extraLoadedAt: 0,        // kapan data tambahan panel sinyal (long/short, OI, order book) terakhir diambil
         spotHostIdx: 0,
         symbolsFromSpot: false,
         incomeDaily: {},         // "YYYY-MM-DD" (waktu lokal perangkat) -> { realized, grossProfit, grossLoss, funding, commission, other, net, trades }
@@ -1174,7 +1220,10 @@
         });
       }
       function fetchJsonFrom(base, path){
-        return fetchWithTimeout(base + path, {}, 8000).then(function(r){
+        // Timeout 5 detik (bukan 8): kalau satu alamat futures mati, halaman
+        // lebih cepat selesai mencoba kelimanya dan pindah ke jalur spot
+        // cadangan, jadi harga/grafik tidak lama kosong.
+        return fetchWithTimeout(base + path, {}, 5000).then(function(r){
           if (!r.ok){
             // Baca pesan error ASLI dari Binance (mis. {"code":-1121,
             // "msg":"Invalid symbol."}) supaya penyebab sebenarnya tampil —
@@ -1412,6 +1461,7 @@
           setDataSource("spot");
           state.lastPrice = parseFloat(t.lastPrice);
           state.markPrice = null;
+          state.nextFundingTime = 0;
           renderStats({
             change: parseFloat(t.priceChangePercent),
             high: parseFloat(t.highPrice),
@@ -1438,6 +1488,7 @@
           var t = res[0], p = res[1];
           state.lastPrice = parseFloat(t.lastPrice);
           state.markPrice = parseFloat(p.markPrice);
+          state.nextFundingTime = parseFloat(p.nextFundingTime) || 0;
           renderStats({
             change: parseFloat(t.priceChangePercent),
             high: parseFloat(t.highPrice),
@@ -1497,6 +1548,7 @@
         $("chartMsg").classList.remove("show");
         drawChart();
         renderOhlc(state.klines[state.klines.length - 1]);
+        renderSignals(true);
       }
       function loadSpotKlines(){
         return spotGet("/api/v3/klines?symbol=" + state.symbol + "&interval=" + state.interval + "&limit=220")
@@ -1565,6 +1617,244 @@
           });
       }
 
+      /* ================= Sinyal & Analisis Indikator ================= */
+      // Semua indikator dihitung LOKAL dari candle yang sudah dimuat grafik
+      // (state.klines, 220 candle, interval mengikuti pilihan grafik) —
+      // tanpa satu pun permintaan jaringan tambahan, jadi tidak menambah
+      // beban rate-limit Binance. Panel ini alat bantu baca arah dari data
+      // masa lalu: BUKAN ramalan, BUKAN jaminan menang, dan tidak pernah
+      // mengisi / mengirim order.
+      function emaSeries(values, period){
+        var k = 2 / (period + 1);
+        var out = [], prev = null;
+        for (var i = 0; i < values.length; i++){
+          if (i < period - 1){ out.push(null); continue; }
+          if (prev === null){
+            var s = 0;
+            for (var j = i - period + 1; j <= i; j++) s += values[j];
+            prev = s / period;
+          } else {
+            prev = values[i] * k + prev * (1 - k);
+          }
+          out.push(prev);
+        }
+        return out;
+      }
+      function rsiWilder(closes, period){
+        if (closes.length <= period) return null;
+        var gains = 0, losses = 0, i, d;
+        for (i = 1; i <= period; i++){
+          d = closes[i] - closes[i - 1];
+          if (d > 0) gains += d; else losses -= d;
+        }
+        var avgG = gains / period, avgL = losses / period;
+        for (i = period + 1; i < closes.length; i++){
+          d = closes[i] - closes[i - 1];
+          avgG = (avgG * (period - 1) + (d > 0 ? d : 0)) / period;
+          avgL = (avgL * (period - 1) + (d < 0 ? -d : 0)) / period;
+        }
+        if (avgL === 0) return avgG === 0 ? 50 : 100;
+        return 100 - 100 / (1 + avgG / avgL);
+      }
+      function atrWilder(ks, period){
+        if (ks.length <= period) return null;
+        var trs = [];
+        for (var i = 1; i < ks.length; i++){
+          var k = ks[i], pc = ks[i - 1].c;
+          trs.push(Math.max(k.h - k.l, Math.abs(k.h - pc), Math.abs(k.l - pc)));
+        }
+        var atr = 0, j;
+        for (j = 0; j < period; j++) atr += trs[j];
+        atr /= period;
+        for (j = period; j < trs.length; j++) atr = (atr * (period - 1) + trs[j]) / period;
+        return atr;
+      }
+      var sigLastRender = 0;
+      function renderSignals(force){
+        var dirEl = $("sigDir");
+        if (!dirEl) return;
+        var now = Date.now();
+        // Candle live tiba tiap detik lewat WebSocket — hitung ulang penuh
+        // paling sering tiap 3 detik supaya halaman tetap ringan di HP.
+        if (!force && now - sigLastRender < 3000) return;
+        sigLastRender = now;
+        var ks = state.klines || [];
+        $("sigMeta").textContent = state.symbol + " · interval " + state.interval + " · " + ks.length + " candle" +
+          (state.dataSource === "spot" ? " · sumber SPOT (cadangan)" : " · sumber FUTURES");
+        if (ks.length < 55){
+          dirEl.textContent = "Data belum cukup";
+          dirEl.className = "sig-dir mono";
+          $("sigScore").textContent = "—";
+          return;
+        }
+        var closes = ks.map(function(k){ return k.c; });
+        var price = closes[closes.length - 1];
+        var votes = 0;
+
+        // --- RSI 14 ---
+        var rsi = rsiWilder(closes, 14);
+        if (rsi != null){
+          var rsiVote = rsi >= 55 ? 1 : rsi <= 45 ? -1 : 0;
+          votes += rsiVote;
+          $("sigRsi").textContent = rsi.toFixed(1);
+          $("sigRsi").className = "v mono" + (rsi >= 70 ? " down" : rsi <= 30 ? " up" : "");
+          $("sigRsiNote").textContent = rsi >= 70 ? "Jenuh beli — kenaikan sudah panas, rawan koreksi walau tren masih naik."
+            : rsi <= 30 ? "Jenuh jual — penurunan sudah jenuh, rawan memantul walau tren masih turun."
+            : rsi >= 55 ? "Momentum condong naik (di atas 55)."
+            : rsi <= 45 ? "Momentum condong turun (di bawah 45)."
+            : "Momentum netral (45–55).";
+        }
+
+        // --- Tren EMA 20 / 50 ---
+        var ema20s = emaSeries(closes, 20), ema50s = emaSeries(closes, 50);
+        var ema20 = ema20s[ema20s.length - 1], ema50 = ema50s[ema50s.length - 1];
+        if (ema20 != null && ema50 != null){
+          var trendVote = (price > ema20 && price > ema50) ? 1 : (price < ema20 && price < ema50) ? -1 : 0;
+          votes += trendVote;
+          $("sigTrend").textContent = trendVote > 0 ? "Naik" : trendVote < 0 ? "Turun" : "Campuran";
+          $("sigTrend").className = "v mono" + (trendVote > 0 ? " up" : trendVote < 0 ? " down" : "");
+          $("sigTrendNote").textContent = "Harga " + fmtPrice(price) + " · EMA20 " + fmtPrice(ema20) + " · EMA50 " + fmtPrice(ema50) +
+            (ema20 > ema50 ? " · EMA20 di atas EMA50 (struktur naik)." : ema20 < ema50 ? " · EMA20 di bawah EMA50 (struktur turun)." : " · EMA20 ≈ EMA50.");
+        }
+
+        // --- MACD 12-26-9 ---
+        var ema12s = emaSeries(closes, 12), ema26s = emaSeries(closes, 26);
+        var macdLine = [];
+        closes.forEach(function(_, i){
+          macdLine.push(ema12s[i] != null && ema26s[i] != null ? ema12s[i] - ema26s[i] : null);
+        });
+        var macdVals = macdLine.filter(function(v){ return v != null; });
+        if (macdVals.length >= 10){
+          var sigLine = emaSeries(macdVals, 9);
+          var hist = macdVals[macdVals.length - 1] - sigLine[sigLine.length - 1];
+          var histPrev = macdVals[macdVals.length - 2] - sigLine[sigLine.length - 2];
+          var macdVote = hist > 0 ? 1 : hist < 0 ? -1 : 0;
+          votes += macdVote;
+          $("sigMacd").textContent = (hist > 0 ? "Positif" : hist < 0 ? "Negatif" : "Nol") + " · " + (hist >= histPrev ? "menguat" : "melemah");
+          $("sigMacd").className = "v mono" + (macdVote > 0 ? " up" : macdVote < 0 ? " down" : "");
+          $("sigMacdNote").textContent = "Histogram " + (hist >= 0 ? "+" : "") + hist.toFixed(priceDecimals(price) + 2) +
+            (hist > 0 ? " — momentum condong naik." : hist < 0 ? " — momentum condong turun." : " — momentum datar.");
+        }
+
+        // --- Bollinger Band 20 (2 deviasi) ---
+        var last20 = closes.slice(-20);
+        var sma20 = last20.reduce(function(a, b){ return a + b; }, 0) / 20;
+        var variance = last20.reduce(function(a, b){ return a + (b - sma20) * (b - sma20); }, 0) / 20;
+        var sd = Math.sqrt(variance);
+        var upper = sma20 + 2 * sd, lower = sma20 - 2 * sd;
+        var pctB = upper > lower ? (price - lower) / (upper - lower) : 0.5;
+        var bbVote = pctB >= 0.75 ? 1 : pctB <= 0.25 ? -1 : 0;
+        votes += bbVote;
+        $("sigBb").textContent = price > upper ? "Di atas band atas" : price < lower ? "Di bawah band bawah"
+          : pctB >= 0.75 ? "Dekat band atas" : pctB <= 0.25 ? "Dekat band bawah" : "Di tengah band";
+        $("sigBb").className = "v mono" + (bbVote > 0 ? " up" : bbVote < 0 ? " down" : "");
+        $("sigBbNote").textContent = "Atas " + fmtPrice(upper) + " · Tengah " + fmtPrice(sma20) + " · Bawah " + fmtPrice(lower) +
+          (price > upper ? " · Harga menembus band atas: momentum sangat kuat, tapi rawan koreksi." : price < lower ? " · Harga menembus band bawah: tekanan jual ekstrem, tapi rawan memantul." : "");
+
+        // --- Volume candle terakhir vs rata-rata 20 ---
+        var lastK = ks[ks.length - 1];
+        var prev20 = ks.slice(-21, -1);
+        var avgVol = prev20.length ? prev20.reduce(function(a, k){ return a + k.v; }, 0) / prev20.length : 0;
+        if (avgVol > 0){
+          var ratio = lastK.v / avgVol;
+          var candleUp = lastK.c >= lastK.o;
+          var volVote = ratio >= 1.2 ? (candleUp ? 1 : -1) : 0;
+          votes += volVote;
+          $("sigVol").textContent = ratio.toFixed(2) + "× rata-rata";
+          $("sigVol").className = "v mono" + (volVote > 0 ? " up" : volVote < 0 ? " down" : "");
+          $("sigVolNote").textContent = ratio >= 1.2
+            ? (candleUp ? "Volume besar mengonfirmasi tekanan beli candle terakhir." : "Volume besar mengonfirmasi tekanan jual candle terakhir.")
+            : ratio <= 0.6 ? "Volume kecil — gerakan candle terakhir kurang meyakinkan."
+            : "Volume wajar, tidak ada konfirmasi kuat dari volume.";
+        }
+
+        // --- Support / resistance 50 candle ---
+        var last50 = ks.slice(-50);
+        var res = -Infinity, sup = Infinity;
+        last50.forEach(function(k){ if (k.h > res) res = k.h; if (k.l < sup) sup = k.l; });
+        $("sigSr").textContent = "S " + fmtPrice(sup) + " · R " + fmtPrice(res);
+
+        // --- ATR 14 + acuan SL/TP kasar ---
+        var atr = atrWilder(ks, 14);
+        if (atr != null && atr > 0){
+          $("sigAtr").textContent = fmtPrice(atr);
+          $("sigAtrNote").textContent = "Acuan LONG — SL " + fmtPrice(price - atr) + " (1×ATR) · TP " + fmtPrice(price + 2 * atr) + " (2×ATR)" +
+            " | Acuan SHORT — SL " + fmtPrice(price + atr) + " · TP " + fmtPrice(price - 2 * atr) +
+            ". Angka acuan kasar dari volatilitas, bukan saran pasti — sesuaikan dengan batas rugi harianmu.";
+        }
+
+        // --- Ringkasan arah keseluruhan ---
+        var dir = votes >= 2 ? "Naik" : votes <= -2 ? "Turun" : "Netral";
+        dirEl.textContent = "Arah: " + dir;
+        dirEl.className = "sig-dir mono" + (dir === "Naik" ? " up" : dir === "Turun" ? " down" : "");
+        $("sigScore").textContent = dir + " (skor " + (votes > 0 ? "+" : "") + votes + " dari 5 indikator)";
+        $("sigScore").className = "v mono" + (dir === "Naik" ? " up" : dir === "Turun" ? " down" : "");
+      }
+
+      /* ================= Data tambahan panel sinyal (publik, ringan) ================= */
+      // Rasio long/short, open interest, dan order book ringkas untuk
+      // pasangan yang sedang dibuka — endpoint PUBLIK futures, tanpa key.
+      // Diambil paling sering tiap ±45 detik, hanya saat jalur futures yang
+      // aktif, dan berhenti total selama blokir rate-limit Binance. Kalau
+      // endpoint tidak terjangkau, barisnya disembunyikan tanpa error.
+      function loadExtraData(){
+        var lsItem = $("sigLsItem"), oiItem = $("sigOiItem"), bookItem = $("sigBookItem");
+        if (!lsItem) return;
+        var futuresJeda = state.futuresDownUntil && Date.now() < state.futuresDownUntil;
+        if (isBanned() || state.dataSource !== "futures" || futuresJeda){
+          lsItem.hidden = true; oiItem.hidden = true; bookItem.hidden = true;
+          return;
+        }
+        var sym = state.symbol;
+        var base = sym.replace(/USDT$/, "");
+        tryHosts("mainnet", "/futures/data/globalLongShortAccountRatio?symbol=" + sym + "&period=5m&limit=1")
+          .then(function(rows){
+            if (sym !== state.symbol || !rows || !rows.length) throw new Error("kosong");
+            var ratio = parseFloat(rows[0].longShortRatio);
+            var longPct = parseFloat(rows[0].longAccount) * 100;
+            if (isNaN(ratio) || isNaN(longPct)) throw new Error("kosong");
+            $("sigLs").textContent = ratio.toFixed(2) + " · Long " + longPct.toFixed(1) + "% / Short " + (100 - longPct).toFixed(1) + "%";
+            lsItem.hidden = false;
+          })
+          .catch(function(){ if (sym === state.symbol) lsItem.hidden = true; });
+        tryHosts("mainnet", "/fapi/v1/openInterest?symbol=" + sym)
+          .then(function(d){
+            if (sym !== state.symbol || !d) throw new Error("kosong");
+            var oi = parseFloat(d.openInterest);
+            if (isNaN(oi)) throw new Error("kosong");
+            $("sigOi").textContent = fmtCompact(oi) + " " + base;
+            oiItem.hidden = false;
+          })
+          .catch(function(){ if (sym === state.symbol) oiItem.hidden = true; });
+        tryHosts("mainnet", "/fapi/v1/depth?symbol=" + sym + "&limit=5")
+          .then(function(d){
+            if (sym !== state.symbol || !d || !d.bids || !d.asks || !d.bids.length || !d.asks.length) throw new Error("kosong");
+            var bid = parseFloat(d.bids[0][0]), ask = parseFloat(d.asks[0][0]);
+            if (!(bid > 0) || !(ask > 0)) throw new Error("kosong");
+            var spread = ask - bid;
+            var spreadPct = bid > 0 ? (spread / bid) * 100 : 0;
+            $("sigBook").textContent = fmtPrice(bid) + " / " + fmtPrice(ask);
+            $("sigBookNote").textContent = "Spread " + fmtPrice(spread) + " (" + spreadPct.toFixed(3) + "%) — makin kecil, makin mudah masuk/keluar posisi.";
+            bookItem.hidden = false;
+          })
+          .catch(function(){ if (sym === state.symbol) bookItem.hidden = true; });
+        state.extraLoadedAt = Date.now();
+      }
+
+      /* ================= Hitung mundur funding berikutnya ================= */
+      function tickFundingCountdown(){
+        var el = $("stFundingCd");
+        if (!el) return;
+        if (state.dataSource !== "futures" || !state.nextFundingTime){
+          if (el.textContent !== "—") el.textContent = "—";
+          return;
+        }
+        var left = Math.max(0, state.nextFundingTime - Date.now());
+        var s = Math.floor(left / 1000);
+        var hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+        el.textContent = (hh > 0 ? hh + "j " : "") + String(mm).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+      }
+
       /* ================= Muat ulang grafik (manual) ================= */
       // Tombol ↻ Muat Ulang di atas grafik: ambil ulang candle + harga
       // terakhir dari Binance dan sambung ulang feed live-nya. Dipakai
@@ -1603,11 +1893,17 @@
         renderSourceUi();
         if (ds === "spot") addLog("Semua alamat API Futures gagal dari browser ini — harga & grafik dialihkan ke data SPOT Binance (cadangan, diberi label). Order tetap lewat API Futures.", "err");
         connectWs();
+        loadExtraData();
       }
       function renderSourceUi(){
         var spot = state.dataSource === "spot";
         var banner = $("srcBanner");
         if (banner) banner.hidden = !spot;
+        var da = $("diagActive");
+        if (da) da.innerHTML = "Jalur data yang sedang dipakai halaman: <b>" + (spot
+          ? "SPOT cadangan — data-api.binance.vision (jalur futures sedang tidak terjangkau dari browser ini; halaman terus mencoba futures lagi secara berkala dan pindah sendiri begitu hidup)"
+          : "FUTURES Mainnet — fapi.binance.com / fapi1–fapi4 (kalau satu alamat mati, halaman pindah sendiri ke alamat berikutnya, lalu ke SPOT cadangan bila semuanya mati)") +
+          "</b>. Semua data pasar ini publik dan tidak butuh API key; key hanya untuk order &amp; data akun.";
         $("chartTitle").textContent = state.symbol + (spot ? " · SPOT (cadangan)" : " Perpetual");
         var ohs = $("orderHeadSym");
         if (ohs) ohs.textContent = state.symbol;
@@ -2098,6 +2394,7 @@
         drawChart();
         if (state.hoverIdx < 0) renderOhlc(candle);
         updateEstimates();
+        renderSignals(false);
       }
       // Polling cadangan yang RINGAN: cukup harga terakhir + 3 candle
       // terakhir yang digabung ke grafik (bukan unduh ulang 220 candle
@@ -2181,6 +2478,7 @@
             updateEstimates();
           } else if (msg.stream.indexOf("@markPrice") >= 0){
             state.markPrice = parseFloat(d.p);
+            if (d.T) state.nextFundingTime = Number(d.T);
             $("stMark").textContent = fmtPrice(state.markPrice);
             var fr = parseFloat(d.r);
             if (!isNaN(fr)){
@@ -2337,6 +2635,7 @@
         loadTicker().catch(function(){ setFeed("off", "Gagal memuat harga"); });
         loadKlines();
         connectWs();
+        loadExtraData();
         updateEstimates();
         // Pasangan yang belum ada di peta bracket (mis. listing baru):
         // ambil bracket-nya sendiri supaya batasnya tetap akurat.
@@ -2432,7 +2731,7 @@
           line.innerHTML = "Terhubung ke <b>" + net().label + "</b> · Saldo USDT tersedia: <b class='mono'>" +
             fmtMoney(state.usdtAvail) + "</b> · Total dompet: <b class='mono'>" + fmtMoney(state.usdtWallet) + "</b>";
         } else {
-          line.textContent = "Belum terhubung. Harga tampil live, tapi order butuh API key Binance kamu.";
+          line.innerHTML = "<b>Mode lihat</b> — harga, grafik, top gainer, dan Sinyal &amp; Analisis tampil penuh tanpa login. Hubungkan API key untuk order, posisi, dan saldo.";
         }
         $("estAvail").textContent = state.connected ? fmtMoney(state.usdtAvail) + " USDT" : "— (belum terhubung)";
         renderPositions();
@@ -3099,7 +3398,7 @@
       }
       function prepareOrder(side){
         if (!state.connected || !state.keys){
-          setOrderMsg("Hubungkan API key dulu untuk mengirim order.", "err");
+          setOrderMsg("Mode lihat — hubungkan API key untuk order. Semua data di halaman ini memang tampil tanpa login; hanya pengiriman order yang butuh key kamu.", "err");
           openApiModal();
           return;
         }
@@ -3401,6 +3700,15 @@
         // menekan Muat Ulang dan tanpa mengosongkan daftar.
         setInterval(function(){ tickGainers(); }, 30000);
         setInterval(function(){ loadGainers(true, true); }, 60000);
+
+        // Hitung mundur funding: murni jam lokal dari nextFundingTime yang
+        // sudah diambil premiumIndex — tanpa permintaan jaringan.
+        setInterval(tickFundingCountdown, 1000);
+        tickFundingCountdown();
+        // Data tambahan panel sinyal (long/short, OI, order book): ringan,
+        // hanya pasangan yang sedang dibuka, ±45 detik sekali.
+        loadExtraData();
+        setInterval(function(){ loadExtraData(); }, 45000);
 
         $("btnApi").addEventListener("click", openApiModal);
         $("btnApiCancel").addEventListener("click", closeApiModal);
