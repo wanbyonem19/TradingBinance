@@ -298,9 +298,9 @@
            belakang bar order yang menempel di bawah: beri ruang ekstra
            saat elemen digulir ke tampilan. */
         button, input, select, .panel, .tab-body{
-          scroll-margin-bottom:calc(104px + env(safe-area-inset-bottom, 0px));
+          scroll-margin-bottom:calc(156px + env(safe-area-inset-bottom, 0px));
         }
-        html{ scroll-padding-bottom:calc(118px + env(safe-area-inset-bottom, 0px)); }
+        html{ scroll-padding-bottom:calc(168px + env(safe-area-inset-bottom, 0px)); }
       }
 
       /* ---------- Bottom panel ---------- */
@@ -413,6 +413,14 @@
       .nav-badge{ font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--input-bg); border:1px solid var(--border-soft); }
       .nav-badge.up{ color:var(--green); }
       .nav-badge.down{ color:var(--red); }
+      .cur-badge{
+        font-size:11px; font-weight:700; letter-spacing:.04em;
+        padding:4px 8px; border-radius:5px; background:var(--panel-2);
+        border:1px solid var(--border); color:var(--muted); white-space:nowrap;
+      }
+      .settings-panel{ margin-top:10px; padding:14px; }
+      .set-note{ color:var(--muted); font-size:13px; margin:10px 0; max-width:780px; }
+      .field-hint{ color:var(--muted); font-size:12px; margin:6px 0 0; }
       @media (max-width:560px){
         .main-nav button{ font-size:13px; min-height:44px; }
       }
@@ -567,6 +575,7 @@
           <label class="sr-only" for="symbolSelect">Pasangan trading</label>
           <select id="symbolSelect" class="mono"></select>
           <span class="net-badge mainnet" id="netBadge">MAINNET</span>
+          <span class="cur-badge mono" id="curBadge">MATA UANG: USDT</span>
         </div>
 
         <div class="stats" aria-live="off">
@@ -591,7 +600,7 @@
             <span class="stat-value mono" id="stLow">—</span>
           </div>
           <div class="stat opt">
-            <span class="stat-label">Volume 24j (USDT)</span>
+            <span class="stat-label" id="stVolLabel">Volume 24j (USDT)</span>
             <span class="stat-value mono" id="stVol">—</span>
           </div>
           <div class="stat opt">
@@ -624,6 +633,7 @@
       <nav class="main-nav" aria-label="Menu utama">
         <button type="button" class="active" id="navTerminal" data-view="terminal"><span class="nav-dot"></span>Terminal Trading</button>
         <button type="button" id="navRisk" data-view="risk"><span class="nav-dot"></span>Risiko &amp; Keuntungan <span class="nav-badge mono" id="navRiskBadge">—</span></button>
+        <button type="button" id="navSettings" data-view="settings"><span class="nav-dot"></span>Pengaturan</button>
       </nav>
 
       <div class="view" id="viewTerminal">
@@ -712,6 +722,7 @@
               <input type="number" id="limitPrice" inputmode="decimal" min="0" step="any" placeholder="0.00" />
               <span>USDT</span>
             </div>
+            <p class="field-hint mono" id="limitIdrHint" hidden></p>
           </div>
 
           <div class="field">
@@ -740,6 +751,7 @@
               <input type="number" id="slInput" inputmode="decimal" min="0" step="any" placeholder="Harga SL" />
             </div>
           </div>
+          <p class="field-hint" id="tpslHint" hidden>Harga TP &amp; SL tetap diisi dalam <b>USDT</b> (satuan Binance) — mode Rupiah hanya mengubah tampilan angka, bukan satuan isian.</p>
 
           <div class="est-box mono">
             <div class="est-row"><span>Nilai order (perkiraan)</span><span id="estNotional">—</span></div>
@@ -762,6 +774,7 @@
             <span>USDT</span>
           </div>
           <p class="fineprint">Order di atas batas ini ditolak halaman ini sebelum dikirim. Mode margin (cross/isolated) mengikuti pengaturan akun Binance kamu. TP/SL dikirim sebagai order penutup (closePosition) setelah order utama masuk.</p>
+          <p class="fineprint" id="inputCurNote" hidden>Mode Rupiah aktif: semua kolom isian di panel ini (harga limit, TP, SL, batas maks. order) tetap dalam <b>USDT</b> karena Binance hanya menerima USDT — yang tampil dalam Rupiah adalah angka hasil hitungan dan tampilan di seluruh halaman. Ganti kembali ke USDT lewat menu Pengaturan.</p>
         </aside>
       </main>
 
@@ -927,6 +940,43 @@
 
       </div><!-- /viewRisk -->
 
+      <div class="view" id="viewSettings" hidden>
+      <!-- ======================= PENGATURAN ======================= -->
+      <section class="panel settings-panel" aria-label="Pengaturan">
+        <div class="risk-head">
+          <h2>Pengaturan</h2>
+        </div>
+
+        <h3 class="risk-subhead">Mata Uang Tampilan <span>USDT atau Rupiah — untuk semua angka uang &amp; harga di halaman ini</span></h3>
+        <div class="seg" id="curSeg" role="group" aria-label="Mata uang tampilan" style="max-width:360px">
+          <button type="button" data-cur="USDT" class="active">USDT</button>
+          <button type="button" data-cur="IDR">Rupiah (IDR)</button>
+        </div>
+        <p class="set-note" id="curNote">Semua angka sedang ditampilkan dalam USDT, satuan asli Binance.</p>
+
+        <h3 class="risk-subhead">Kurs USDT ke Rupiah <span>dipakai hanya untuk konversi tampilan</span></h3>
+        <div class="risk-fields" style="max-width:560px">
+          <div class="field">
+            <label for="rateInput">Kurs 1 USDT = … Rupiah</label>
+            <input type="number" id="rateInput" class="mono" inputmode="decimal" min="1" step="any" placeholder="cth. 18398" />
+          </div>
+          <div class="field">
+            <label for="btnRateFetch">Kurs otomatis</label>
+            <button type="button" class="btn btn-accent" id="btnRateFetch" style="width:100%">Ambil Kurs Terbaru</button>
+          </div>
+        </div>
+        <p class="set-note mono" id="rateStatus">Kurs: belum diambil.</p>
+
+        <div class="est-box mono" style="max-width:560px">
+          <div class="est-row"><span>Contoh 1 USDT</span><span id="convEx1">—</span></div>
+          <div class="est-row"><span>Contoh 100 USDT</span><span id="convEx2">—</span></div>
+          <div class="est-row"><span>Harga pasangan yang sedang dibuka</span><span id="convEx3">—</span></div>
+        </div>
+
+        <p class="set-note"><b>Cara kerjanya:</b> kurs diambil otomatis dari harga pasangan <b>USDTIDR di pasar spot Binance</b> (USDT memang diperdagangkan langsung melawan Rupiah di sana); kalau alamat itu tidak terjangkau, halaman memakai kurs publik USD/IDR sebagai cadangan. Kamu juga bisa mengetik kurs sendiri di kolom di atas — angka itu langsung dipakai. Konversi ini <b>hanya soal tampilan</b>: saldo, order, dan semua perhitungan Binance tetap dalam USDT, dan kolom isian harga (limit, TP, SL, batas order, batas risiko) tetap diisi dalam USDT. Pilihan mata uang berlaku selama halaman terbuka, sama seperti API key yang juga hanya hidup di memori halaman ini.</p>
+      </section>
+      </div><!-- /viewSettings -->
+
       <!-- ======================= DIAGNOSIS KONEKSI ======================= -->
       <section class="panel diag-panel" aria-label="Diagnosis koneksi">
         <div class="diag-head">
@@ -941,6 +991,7 @@
       <footer class="panel foot">
         <p><b>Cara kerja halaman ini:</b> harga dan grafik selalu diambil dari API publik <b>Futures Mainnet</b> Binance (fapi.binance.com, lalu cadangan fapi1–fapi4) — pasar aslinya — dan <b>order serta data akun</b> juga dikirim ke Futures Mainnet. Alamat www.binance.com/fapi tidak dipakai — dari browser di luar situs Binance alamat itu tidak melayani data futures dan tidak memberi izin lintas-origin, jadi fetch selalu gagal. Kalau semua alamat futures tetap tidak terjangkau dari browser kamu, halaman otomatis menampilkan harga &amp; grafik SPOT Binance dari data-api.binance.vision sebagai cadangan, selalu diberi label “SPOT (cadangan)” — kecuali pasangan futures-only yang memang tidak punya pasar spot, yang grafiknya hanya bisa tampil saat API Futures terjangkau; panel Diagnosis Koneksi di atas menunjukkan alamat mana yang terjangkau dan mana yang gagal dari browser kamu. Daftar pasangan di pemilih adalah daftar lengkap perpetual USDT (570 pasangan) yang tertanam di dalam halaman ini — dibekukan dari data Binance Futures per 19 November 2026 dan termasuk EVAAUSDT — jadi tetap lengkap dan bisa dicari lewat kotak pencarian walau semua API Binance gagal; simbol yang lebih baru ditambahkan otomatis saat exchangeInfo futures terjangkau. Panel Sinyal &amp; Analisis Indikator dihitung langsung di browser dari candle grafik yang sudah dimuat (RSI, EMA, MACD, Bollinger, ATR) ditambah data publik futures (rasio long/short, open interest, order book) — semuanya tanpa API key, dan panel itu tidak pernah mengirim order. Order ditandatangani di browser kamu dan dikirim langsung dari browser ke Binance — tidak lewat server lain. API key hanya disimpan di memori halaman selama halaman terbuka; key hilang begitu halaman ditutup atau dimuat ulang, dan tidak pernah dikirim ke siapa pun selain Binance.</p>
         <p><b>Risiko:</b> trading futures berleverage bisa menghapus seluruh margin kamu dalam hitungan menit. Halaman ini hanya terhubung ke Mainnet — semua order memakai uang asli. Mulai dari nominal kecil dan leverage rendah, dan jangan pernah memakai key dengan izin withdraw.</p>
+        <p><b>Mata uang tampilan:</b> lewat menu <b>Pengaturan</b>, semua angka uang dan harga di halaman ini bisa ditampilkan dalam <b>Rupiah (IDR)</b> selain USDT. Konversinya memakai kurs USDT/IDR dari pasar spot Binance (pasangan USDTIDR), kurs publik USD/IDR sebagai cadangan, atau kurs yang kamu ketik sendiri di Pengaturan. Ini murni tampilan — order, saldo, dan perhitungan di Binance selalu tetap dalam USDT.</p>
       </footer>
     </div>
 
@@ -1134,7 +1185,13 @@
         incomeLoading: false,
         pnlExpanded: false,
         view: "terminal",
-        risk: { dailyLossLimit: 50, dailyTarget: 25, perTradePct: 1, selfMaxLev: 20 }
+        risk: { dailyLossLimit: 50, dailyTarget: 25, perTradePct: 1, selfMaxLev: 20 },
+        currency: "USDT",        // mata uang tampilan: "USDT" | "IDR" — HANYA tampilan; hitungan & order selalu USDT
+        usdIdrRate: null,        // kurs 1 USDT dalam Rupiah (spot Binance USDTIDR / cadangan kurs publik / ketik manual)
+        usdIdrAt: 0,             // kapan kurs terakhir didapat
+        usdIdrSrc: "",           // sumber kurs yang sedang dipakai
+        rateBusy: false,         // true selama kurs sedang diambil
+        lastStats: null          // snapshot statistik terakhir, untuk menggambar ulang saat mata uang diganti
       };
 
       function $(id){ return document.getElementById(id); }
@@ -1150,22 +1207,162 @@
         if (p >= 0.01) return 5;
         return 6;
       }
+      /* ================= Mata uang tampilan: USDT / Rupiah ================= */
+      // Semua angka asli di halaman ini selalu dalam USDT (satuan Binance).
+      // Mode Rupiah HANYA mengubah cara angka ditampilkan: nilai USDT dikali
+      // kurs saat digambar ke layar. Order, saldo, batas risiko, dan semua
+      // perhitungan internal tidak pernah berganti satuan.
+      function idrActive(){
+        return state.currency === "IDR" && !!(state.usdIdrRate && state.usdIdrRate > 0);
+      }
+      function fmtIdr(v){
+        // Format angka Rupiah: pemisah ribuan titik, koma desimal (id-ID);
+        // tanpa desimal untuk nilai besar supaya tetap terbaca.
+        var a = Math.abs(v);
+        var d = a >= 1000 ? 0 : a >= 1 ? 2 : 4;
+        return Number(v).toLocaleString("id-ID", { minimumFractionDigits: d, maximumFractionDigits: d });
+      }
+      function unitSuffix(){ return idrActive() ? "" : " USDT"; }
+      function priceSuffix(){ return idrActive() ? " Rp" : " USDT"; }
       function fmtPrice(p){
         if (p == null || isNaN(p)) return "—";
+        if (idrActive()) return fmtIdr(p * state.usdIdrRate);
         var d = priceDecimals(p);
         return Number(p).toLocaleString("en-US", { minimumFractionDigits: d, maximumFractionDigits: d });
       }
+      function fmtAxisPrice(p){
+        // Label sumbu grafik: dalam Rupiah angkanya panjang sekali (harga BTC
+        // bisa miliaran), jadi sumbu memakai bentuk ringkas — 1,60 M dst.
+        if (p == null || isNaN(p)) return "—";
+        if (!idrActive()) return fmtPrice(p);
+        var v = p * state.usdIdrRate, a = Math.abs(v);
+        function c(x, u){ return x.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + u; }
+        if (a >= 1e9) return c(v / 1e9, " M");
+        if (a >= 1e6) return c(v / 1e6, " jt");
+        if (a >= 1e3) return c(v / 1e3, " rb");
+        return fmtIdr(v);
+      }
       function fmtMoney(n){
         if (n == null || isNaN(n)) return "—";
+        if (idrActive()) return "Rp " + fmtIdr(n * state.usdIdrRate);
         return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
-      function fmtCompact(n){
+      function fmtCompact(n, money){
         if (n == null || isNaN(n)) return "—";
+        if (money && idrActive()){
+          // Volume dalam uang (USDT) ditampilkan ringkas dalam Rupiah:
+          // Rp 1,23 T / Rp 456 M (miliar) / Rp 7,89 jt / Rp 12 rb.
+          var v = Math.abs(n) * state.usdIdrRate, s = n < 0 ? "−" : "";
+          function cm(x, u){ return s + "Rp " + x.toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + u; }
+          if (v >= 1e12) return cm(v / 1e12, " T");
+          if (v >= 1e9) return cm(v / 1e9, " M");
+          if (v >= 1e6) return cm(v / 1e6, " jt");
+          if (v >= 1e3) return cm(v / 1e3, " rb");
+          return s + "Rp " + fmtIdr(n * state.usdIdrRate);
+        }
         if (Math.abs(n) >= 1e9) return (n/1e9).toFixed(2) + "B";
         if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(2) + "M";
         if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(2) + "K";
         return n.toFixed(2);
       }
+      /* ================= Kurs & ganti mata uang ================= */
+      function setIdrRate(p, src){
+        state.usdIdrRate = p;
+        state.usdIdrAt = Date.now();
+        state.usdIdrSrc = src;
+        state.rateBusy = false;
+        var inp = $("rateInput");
+        if (inp && document.activeElement !== inp) inp.value = Math.round(p * 100) / 100;
+        refreshCurrencyDisplays();
+      }
+      function fetchIdrRate(manual){
+        if (state.rateBusy) return;
+        state.rateBusy = true;
+        renderRateUi();
+        // Sumber utama: pasangan USDTIDR di pasar spot Binance — USDT memang
+        // diperdagangkan langsung melawan Rupiah di sana, jadi harganya
+        // adalah kurs USDT->IDR yang paling dekat dengan akun pengguna.
+        spotGet("/api/v3/ticker/price?symbol=USDTIDR").then(function(d){
+          var p = d && parseFloat(d.price);
+          if (!(p > 0)) throw new Error("harga USDTIDR tidak valid");
+          setIdrRate(p, "pasar spot Binance (USDTIDR)");
+        }).catch(function(){
+          // Cadangan: kurs publik USD/IDR (USDT dianggap setara USD).
+          return fetchWithTimeout("https://open.er-api.com/v6/latest/USD", null, 10000)
+            .then(function(r){ return r.json(); })
+            .then(function(d){
+              var p = d && d.rates && parseFloat(d.rates.IDR);
+              if (!(p > 0)) throw new Error("kurs cadangan tidak valid");
+              setIdrRate(p, "kurs publik USD/IDR (exchangerate-api.com)");
+            });
+        }).catch(function(){
+          state.rateBusy = false;
+          renderRateUi("Kurs: gagal mengambil otomatis dari Binance maupun kurs publik — periksa koneksi, atau isi kurs manual di kolom di atas.");
+          if (manual) toast("Gagal mengambil kurs otomatis. Isi kurs manual di menu Pengaturan.", "err");
+        });
+      }
+      function setCurrency(cur){
+        if (state.currency === cur){ renderRateUi(); return; }
+        state.currency = cur;
+        document.querySelectorAll("#curSeg button").forEach(function(b){
+          b.classList.toggle("active", b.dataset.cur === cur);
+        });
+        if (cur === "IDR" && !state.usdIdrRate) fetchIdrRate(false);
+        refreshCurrencyDisplays();
+        toast(cur === "IDR"
+          ? "Mata uang tampilan: Rupiah (IDR). Order & perhitungan tetap dalam USDT."
+          : "Mata uang tampilan: USDT.");
+      }
+      function updateLimitHint(){
+        var hint = $("limitIdrHint");
+        if (!hint) return;
+        var inp = $("limitPrice");
+        var v = inp ? parseFloat(inp.value) : NaN;
+        if (idrActive() && v > 0){
+          hint.hidden = false;
+          hint.textContent = "≈ Rp " + fmtIdr(v * state.usdIdrRate) + " — tetap dikirim ke Binance sebagai " + v + " USDT.";
+        } else {
+          hint.hidden = true;
+        }
+      }
+      function renderRateUi(msg){
+        var badge = $("curBadge");
+        if (badge) badge.textContent = idrActive() ? "MATA UANG: Rp" : (state.currency === "IDR" ? "MATA UANG: Rp (MENUNGGU KURS)" : "MATA UANG: USDT");
+        var vl = $("stVolLabel");
+        if (vl) vl.textContent = "Volume 24j (" + (idrActive() ? "Rp" : "USDT") + ")";
+        var note = $("curNote");
+        if (note) note.textContent = state.currency === "IDR"
+          ? (idrActive()
+              ? "Semua angka uang & harga sedang ditampilkan dalam Rupiah, dikonversi dari USDT memakai kurs di bawah. Order dan semua perhitungan tetap dalam USDT."
+              : "Mode Rupiah dipilih, tapi kurs belum tersedia — angka masih ditampilkan dalam USDT sampai kurs berhasil diambil atau kamu mengisinya manual di bawah.")
+          : "Semua angka sedang ditampilkan dalam USDT, satuan asli Binance.";
+        var rs = $("rateStatus");
+        if (rs){
+          if (msg) rs.textContent = msg;
+          else if (state.rateBusy) rs.textContent = "Kurs: sedang mengambil…";
+          else if (state.usdIdrRate) rs.textContent = "Kurs aktif: 1 USDT = Rp " + fmtIdr(state.usdIdrRate) + " — sumber: " + state.usdIdrSrc + (state.usdIdrAt ? ", diambil " + new Date(state.usdIdrAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "") + ".";
+          else rs.textContent = "Kurs: belum diambil. Tekan \"Ambil Kurs Terbaru\" atau isi manual.";
+        }
+        var e1 = $("convEx1"), e2 = $("convEx2"), e3 = $("convEx3");
+        if (e1) e1.textContent = fmtMoney(1) + unitSuffix();
+        if (e2) e2.textContent = fmtMoney(100) + unitSuffix();
+        if (e3) e3.textContent = state.lastPrice != null ? fmtPrice(state.lastPrice) + priceSuffix() + " (" + state.symbol + ")" : "—";
+        var tn = $("tpslHint"); if (tn) tn.hidden = state.currency !== "IDR";
+        var icn = $("inputCurNote"); if (icn) icn.hidden = state.currency !== "IDR";
+        var bf = $("btnRateFetch"); if (bf) bf.disabled = !!state.rateBusy;
+        updateLimitHint();
+      }
+      function refreshCurrencyDisplays(){
+        renderRateUi();
+        if (state.lastStats) renderStats(state.lastStats);
+        drawChart();
+        if (state.klines.length) renderOhlc(state.klines[state.klines.length - 1]);
+        renderSignals(true);
+        renderAccount();
+        var gc = state.gainersCache[state.gainerRange];
+        if (gc && gc.rows) renderGainers(gc.rows, currentGainerRange(), gc.src);
+      }
+
       function nowTime(){
         return new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       }
@@ -1516,6 +1713,7 @@
       }
 
       function renderStats(s){
+        state.lastStats = s;
         var priceEl = $("stPrice");
         priceEl.textContent = fmtPrice(state.lastPrice);
         priceEl.className = "stat-value mono" + (s.change > 0 ? " up" : s.change < 0 ? " down" : "");
@@ -1536,7 +1734,7 @@
         $("stMark").textContent = fmtPrice(state.markPrice);
         $("stHigh").textContent = fmtPrice(s.high);
         $("stLow").textContent = fmtPrice(s.low);
-        $("stVol").textContent = fmtCompact(s.vol);
+        $("stVol").textContent = fmtCompact(s.vol, true);
         if (!isNaN(s.funding)) $("stFunding").textContent = (s.funding * 100).toFixed(4) + "%";
       }
 
@@ -1732,7 +1930,7 @@
           votes += macdVote;
           $("sigMacd").textContent = (hist > 0 ? "Positif" : hist < 0 ? "Negatif" : "Nol") + " · " + (hist >= histPrev ? "menguat" : "melemah");
           $("sigMacd").className = "v mono" + (macdVote > 0 ? " up" : macdVote < 0 ? " down" : "");
-          $("sigMacdNote").textContent = "Histogram " + (hist >= 0 ? "+" : "") + hist.toFixed(priceDecimals(price) + 2) +
+          $("sigMacdNote").textContent = "Histogram " + (hist >= 0 ? "+" : "") + (idrActive() ? fmtIdr(hist * state.usdIdrRate) : hist.toFixed(priceDecimals(price) + 2)) +
             (hist > 0 ? " — momentum condong naik." : hist < 0 ? " — momentum condong turun." : " — momentum datar.");
         }
 
@@ -2163,7 +2361,7 @@
             '<span class="g-sym mono">' + esc(r.symbol) + "</span>" +
             '<span class="g-price mono">' + fmtPrice(r.price) + "</span>" +
             '<span class="g-chg mono ' + (upCls ? "up" : "down") + '">' + (upCls ? "+" : "") + r.change.toFixed(2) + "%</span>" +
-            '<span class="g-vol mono">' + fmtCompact(r.vol) + "</span>" +
+            '<span class="g-vol mono">' + fmtCompact(r.vol, true) + "</span>" +
             "</button>";
         }).join("");
         body.querySelectorAll("[data-sym]").forEach(function(b){
@@ -2246,7 +2444,7 @@
           ctx.strokeStyle = grid; ctx.lineWidth = 1;
           ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(plotW, yy); ctx.stroke();
           ctx.fillStyle = muted;
-          ctx.fillText(fmtPrice(p), plotW + 6, yy);
+          ctx.fillText(fmtAxisPrice(p), plotW + 6, yy);
         }
         // volume bars
         data.forEach(function(k, idx){
@@ -2274,7 +2472,7 @@
           ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(plotW, ly); ctx.stroke();
           ctx.setLineDash([]); ctx.globalAlpha = 1;
           ctx.fillStyle = textCol;
-          ctx.fillText(fmtPrice(state.lastPrice), plotW + 6, Math.max(9, ly - 9));
+          ctx.fillText(fmtAxisPrice(state.lastPrice), plotW + 6, Math.max(9, ly - 9));
         }
         // time labels
         ctx.fillStyle = muted;
@@ -2298,7 +2496,7 @@
           ctx.beginPath(); ctx.moveTo(0, hy); ctx.lineTo(plotW, hy); ctx.stroke();
           ctx.globalAlpha = 1;
           ctx.fillStyle = textCol;
-          ctx.fillText(fmtPrice(hk.c), plotW + 6, Math.max(9, hy - 9));
+          ctx.fillText(fmtAxisPrice(hk.c), plotW + 6, Math.max(9, hy - 9));
         }
         var zl = $("zoomLabel");
         if (zl) zl.textContent = data.length + " candle";
@@ -2728,12 +2926,12 @@
       function renderAccount(){
         var line = $("acctLine");
         if (state.connected){
-          line.innerHTML = "Terhubung ke <b>" + net().label + "</b> · Saldo USDT tersedia: <b class='mono'>" +
+          line.innerHTML = "Terhubung ke <b>" + net().label + "</b> · Saldo tersedia: <b class='mono'>" +
             fmtMoney(state.usdtAvail) + "</b> · Total dompet: <b class='mono'>" + fmtMoney(state.usdtWallet) + "</b>";
         } else {
           line.innerHTML = "<b>Mode lihat</b> — harga, grafik, top gainer, dan Sinyal &amp; Analisis tampil penuh tanpa login. Hubungkan API key untuk order, posisi, dan saldo.";
         }
-        $("estAvail").textContent = state.connected ? fmtMoney(state.usdtAvail) + " USDT" : "— (belum terhubung)";
+        $("estAvail").textContent = state.connected ? fmtMoney(state.usdtAvail) + unitSuffix() : "— (belum terhubung)";
         renderPositions();
         renderOrders();
         renderPnlAndRisk();
@@ -2817,12 +3015,12 @@
             '<div><span class="k">Jumlah</span><span class="v mono">' + esc(p.positionAmt) + "</span></div>" +
             '<div><span class="k">Harga masuk</span><span class="v mono">' + fmtPrice(entry) + "</span></div>" +
             '<div><span class="k">Mark price</span><span class="v mono">' + fmtPrice(mark) + "</span></div>" +
-            '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + " USDT (" + fmtPctSigned(roi) + ")</span></div>" +
+            '<div><span class="k">PnL belum terealisasi</span><span class="v mono ' + (pnl >= 0 ? "up" : "down") + '">' + (pnl >= 0 ? "+" : "") + fmtMoney(pnl) + unitSuffix() + " (" + fmtPctSigned(roi) + ")</span></div>" +
             '<div><span class="k">Naik/turun dari harga masuk</span><span class="v mono ' + (movePct >= 0 ? "up" : "down") + '">' + fmtPctSigned(movePct) + "</span></div>" +
             '<div><span class="k">Stop loss</span><span class="v mono ' + (tpsl.sl != null ? "down" : "") + '">' + esc(slTxt) + "</span></div>" +
             '<div><span class="k">Take profit</span><span class="v mono ' + (tpsl.tp != null ? "up" : "") + '">' + esc(tpTxt) + "</span></div>" +
             '<div><span class="k">Harga likuidasi</span><span class="v mono">' + fmtPrice(parseFloat(p.liquidationPrice)) + "</span></div>" +
-            '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(margin) + " USDT</span></div>" +
+            '<div><span class="k">Margin</span><span class="v mono">' + fmtMoney(margin) + unitSuffix() + "</span></div>" +
             "</div></div>";
         }).join("");
         box.querySelectorAll("[data-close]").forEach(function(btn){
@@ -2903,7 +3101,7 @@
       }
       function signedMoney(n){
         if (n == null || isNaN(n)) return "—";
-        return (n > 0 ? "+" : n < 0 ? "−" : "") + fmtMoney(Math.abs(n)) + " USDT";
+        return (n > 0 ? "+" : n < 0 ? "−" : "") + fmtMoney(Math.abs(n)) + unitSuffix();
       }
       function loadIncomeHistory(force){
         if (!state.connected || !state.keys || state.incomeLoading) return Promise.resolve();
@@ -3143,10 +3341,10 @@
         var lossBar = $("riskLossBar");
         lossBar.style.width = lossPct.toFixed(1) + "%";
         lossBar.className = "meter-fill" + (lossPct >= 100 ? " danger" : lossPct >= 70 ? " warn" : "");
-        $("riskLossLabel").textContent = signedMoney(-lossUsed) + " dari batas −" + fmtMoney(r.dailyLossLimit) + " USDT (" + lossPct.toFixed(0) + "%)";
+        $("riskLossLabel").textContent = signedMoney(-lossUsed) + " dari batas −" + fmtMoney(r.dailyLossLimit) + unitSuffix() + " (" + lossPct.toFixed(0) + "%)";
         var tgtPct = r.dailyTarget > 0 ? Math.max(0, Math.min(100, (todayAll / r.dailyTarget) * 100)) : 0;
         $("riskTargetBar").style.width = tgtPct.toFixed(1) + "%";
-        $("riskTargetLabel").textContent = signedMoney(todayAll) + " dari target +" + fmtMoney(r.dailyTarget) + " USDT (" + tgtPct.toFixed(0) + "%)";
+        $("riskTargetLabel").textContent = signedMoney(todayAll) + " dari target +" + fmtMoney(r.dailyTarget) + unitSuffix() + " (" + tgtPct.toFixed(0) + "%)";
 
         var wallet = state.usdtWallet || 0;
         var totalMargin = 0, totalExposure = 0, nearestLiq = null, noSlCount = 0;
@@ -3165,21 +3363,21 @@
         var marginPct = wallet > 0 ? (totalMargin / wallet) * 100 : null;
         var riskAmt = wallet > 0 ? wallet * (r.perTradePct / 100) : 0;
         $("riskMetrics").innerHTML =
-          '<div class="est-row"><span>Saldo dompet USDT</span><span>' + fmtMoney(wallet) + ' USDT</span></div>' +
+          '<div class="est-row"><span>Saldo dompet</span><span>' + fmtMoney(wallet) + unitSuffix() + '</span></div>' +
           '<div class="est-row"><span>PnL bersih hari ini (realisasi + mengambang)</span><span class="' + (todayAll >= 0 ? "up" : "down") + '">' + signedMoney(todayAll) + '</span></div>' +
           '<div class="est-row"><span>PnL bersih 24 jam berjalan (+ mengambang)</span><span class="' + (eff.rolling >= 0 ? "up" : "down") + '">' + signedMoney(eff.rolling) + '</span></div>' +
           '<div class="est-row"><span>Yang dipakai batas rugi (terburuk dari keduanya)</span><span class="' + (riskPnl >= 0 ? "up" : "down") + '">' + signedMoney(riskPnl) + '</span></div>' +
-          '<div class="est-row"><span>Margin terpakai posisi terbuka</span><span>' + fmtMoney(totalMargin) + ' USDT' + (marginPct != null ? " (" + marginPct.toFixed(1) + "% dompet)" : "") + '</span></div>' +
-          '<div class="est-row"><span>Total eksposur (nilai posisi)</span><span>' + fmtMoney(totalExposure) + ' USDT</span></div>' +
+          '<div class="est-row"><span>Margin terpakai posisi terbuka</span><span>' + fmtMoney(totalMargin) + unitSuffix() + (marginPct != null ? " (" + marginPct.toFixed(1) + "% dompet)" : "") + '</span></div>' +
+          '<div class="est-row"><span>Total eksposur (nilai posisi)</span><span>' + fmtMoney(totalExposure) + unitSuffix() + '</span></div>' +
           '<div class="est-row"><span>Posisi terbuka</span><span>' + (state.positions || []).length + ' posisi</span></div>' +
           '<div class="est-row"><span>Jarak likuidasi terdekat</span><span>' + (nearestLiq ? esc(nearestLiq.sym) + " · " + nearestLiq.dist.toFixed(2) + "% dari mark" : "—") + '</span></div>' +
-          '<div class="est-row"><span>Anggaran risiko per trade kamu</span><span>' + fmtMoney(riskAmt) + ' USDT (' + r.perTradePct + '% saldo)</span></div>';
+          '<div class="est-row"><span>Anggaran risiko per trade kamu</span><span>' + fmtMoney(riskAmt) + unitSuffix() + ' (' + r.perTradePct + '% saldo)</span></div>';
 
         var warns = [];
         if (r.dailyLossLimit > 0 && riskPnl <= -r.dailyLossLimit){
-          warns.push({ cls: "danger", txt: "<b>Batas rugi tercapai.</b> PnL bersih terburuk (hari ini " + signedMoney(todayAll) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas −" + fmtMoney(r.dailyLossLimit) + " USDT. Order baru dari halaman ini diblokir sampai angka bersihnya pulih di atas batas (untung baru akan mengurangi rugi ini secara otomatis) atau sampai kamu menaikkan batasnya dengan sadar. Menutup posisi tetap bisa." });
+          warns.push({ cls: "danger", txt: "<b>Batas rugi tercapai.</b> PnL bersih terburuk (hari ini " + signedMoney(todayAll) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas −" + fmtMoney(r.dailyLossLimit) + unitSuffix() + ". Order baru dari halaman ini diblokir sampai angka bersihnya pulih di atas batas (untung baru akan mengurangi rugi ini secara otomatis) atau sampai kamu menaikkan batasnya dengan sadar. Menutup posisi tetap bisa." });
         } else if (lossPct >= 70){
-          warns.push({ cls: "warn", txt: "<b>Mendekati batas rugi (" + lossPct.toFixed(0) + "%).</b> Sisa ruang rugi tinggal " + fmtMoney(Math.max(0, r.dailyLossLimit - lossUsed)) + " USDT. Untung berikutnya akan mengurangi rugi bersih ini otomatis; mengejar balik dengan ukuran lebih besar justru mempercepat kena batas." });
+          warns.push({ cls: "warn", txt: "<b>Mendekati batas rugi (" + lossPct.toFixed(0) + "%).</b> Sisa ruang rugi tinggal " + fmtMoney(Math.max(0, r.dailyLossLimit - lossUsed)) + unitSuffix() + ". Untung berikutnya akan mengurangi rugi bersih ini otomatis; mengejar balik dengan ukuran lebih besar justru mempercepat kena batas." });
         }
         if (state.leverage > r.selfMaxLev){
           warns.push({ cls: "warn", txt: "<b>Leverage panel order (" + state.leverage + "x) di atas batas versi kamu (" + r.selfMaxLev + "x).</b> Order akan diblokir halaman ini — turunkan leverage atau naikkan batasmu dengan sadar." });
@@ -3194,7 +3392,7 @@
           warns.push({ cls: "danger", txt: "<b>Jarak likuidasi " + esc(nearestLiq.sym) + " tinggal " + nearestLiq.dist.toFixed(2) + "%.</b> Posisi ini sangat dekat ke likuidasi — putuskan sekarang: tambah margin, perkecil, atau tutup." });
         }
         if (r.dailyTarget > 0 && todayAll >= r.dailyTarget){
-          warns.push({ cls: "ok", txt: "<b>Target harian tercapai (" + signedMoney(todayAll) + ").</b> Patokan besok tetap sama: target +" + fmtMoney(r.dailyTarget) + " USDT dengan batas rugi −" + fmtMoney(r.dailyLossLimit) + " USDT. Berhenti saat target tercapai adalah bagian dari rencananya." });
+          warns.push({ cls: "ok", txt: "<b>Target harian tercapai (" + signedMoney(todayAll) + ").</b> Patokan besok tetap sama: target +" + fmtMoney(r.dailyTarget) + unitSuffix() + " dengan batas rugi −" + fmtMoney(r.dailyLossLimit) + unitSuffix() + ". Berhenti saat target tercapai adalah bagian dari rencananya." });
         }
         if (!warns.length){
           warns.push({ cls: "ok", txt: "Status risiko normal: PnL hari ini di dalam batas, leverage panel order di dalam batas versi kamu. Tetap pasang stop loss di setiap order." });
@@ -3210,7 +3408,7 @@
         var r = state.risk;
         var eff = effectivePnl();
         if (r.dailyLossLimit > 0 && eff.effective <= -r.dailyLossLimit){
-          return "Diblokir manajemen risiko: PnL bersih terburuk " + signedMoney(eff.effective) + " (hari ini " + signedMoney(eff.today) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas rugi −" + fmtMoney(r.dailyLossLimit) + " USDT. Blokir lepas otomatis begitu untung baru mengangkat angka bersihnya, catatan rugi keluar dari jendela 24 jam, atau batasnya kamu naikkan di menu Risiko & Keuntungan.";
+          return "Diblokir manajemen risiko: PnL bersih terburuk " + signedMoney(eff.effective) + " (hari ini " + signedMoney(eff.today) + " · 24 jam berjalan " + signedMoney(eff.rolling) + ") sudah melewati batas rugi −" + fmtMoney(r.dailyLossLimit) + unitSuffix() + ". Blokir lepas otomatis begitu untung baru mengangkat angka bersihnya, catatan rugi keluar dari jendela 24 jam, atau batasnya kamu naikkan di menu Risiko & Keuntungan.";
         }
         if (state.leverage > r.selfMaxLev){
           return "Diblokir manajemen risiko: leverage " + state.leverage + "x melebihi batas versi kamu " + r.selfMaxLev + "x (di panel Manajemen Risiko). Turunkan leverage atau sesuaikan batasnya.";
@@ -3346,8 +3544,8 @@
           return;
         }
         var notional = q * p;
-        $("estNotional").textContent = fmtMoney(notional) + " USDT";
-        $("estMargin").textContent = fmtMoney(notional / state.leverage) + " USDT";
+        $("estNotional").textContent = fmtMoney(notional) + unitSuffix();
+        $("estMargin").textContent = fmtMoney(notional / state.leverage) + unitSuffix();
         $("estLiq").textContent = "Long ≈ " + fmtPrice(estLiq(p, state.leverage, "BUY")) + " · Short ≈ " + fmtPrice(estLiq(p, state.leverage, "SELL"));
       }
 
@@ -3426,8 +3624,8 @@
         var notional = q * p;
         var cap = parseFloat($("capInput").value);
         if (!isNaN(cap) && cap > 0 && notional > cap){
-          setOrderMsg("Ditolak: nilai order " + fmtMoney(notional) + " USDT melebihi batas maks. " + fmtMoney(cap) + " USDT. Turunkan jumlah atau naikkan batasnya dengan sadar.", "err");
-          addLog("Order ditolak halaman: nilai " + fmtMoney(notional) + " USDT di atas batas " + fmtMoney(cap) + " USDT.", "err");
+          setOrderMsg("Ditolak: nilai order " + fmtMoney(notional) + unitSuffix() + " melebihi batas maks. " + fmtMoney(cap) + unitSuffix() + ". Turunkan jumlah atau naikkan batasnya dengan sadar.", "err");
+          addLog("Order ditolak halaman: nilai " + fmtMoney(notional) + unitSuffix() + " di atas batas " + fmtMoney(cap) + unitSuffix() + ".", "err");
           return;
         }
         if (state.orderType === "LIMIT"){
@@ -3442,14 +3640,14 @@
           ["Arah", side === "BUY" ? "LONG / BELI" : "SHORT / JUAL"],
           ["Tipe", state.orderType],
           ["Jumlah", q + " " + state.symbol.replace("USDT", "")],
-          ["Harga acuan", fmtPrice(p) + " USDT"],
-          ["Nilai order", "≈ " + fmtMoney(notional) + " USDT"],
+          ["Harga acuan", fmtPrice(p) + priceSuffix()],
+          ["Nilai order", "≈ " + fmtMoney(notional) + unitSuffix()],
           ["Leverage", state.leverage + "x"],
-          ["Margin (perkiraan)", "≈ " + fmtMoney(notional / state.leverage) + " USDT"],
-          ["Likuidasi (perkiraan kasar)", fmtPrice(estLiq(p, state.leverage, side)) + " USDT"]
+          ["Margin (perkiraan)", "≈ " + fmtMoney(notional / state.leverage) + unitSuffix()],
+          ["Likuidasi (perkiraan kasar)", fmtPrice(estLiq(p, state.leverage, side)) + priceSuffix()]
         ];
-        if (!isNaN(tp) && tp > 0) rows.push(["Take profit", fmtPrice(tp) + " USDT"]);
-        if (!isNaN(sl) && sl > 0) rows.push(["Stop loss", fmtPrice(sl) + " USDT"]);
+        if (!isNaN(tp) && tp > 0) rows.push(["Take profit", fmtPrice(tp) + priceSuffix()]);
+        if (!isNaN(sl) && sl > 0) rows.push(["Stop loss", fmtPrice(sl) + priceSuffix()]);
         openConfirm({
           title: "Konfirmasi Order — UANG ASLI",
           sub: "Ini jaringan Mainnet. Order ini memakai uang asli di akun Binance kamu.",
@@ -3526,7 +3724,7 @@
               var cpnl = parseFloat(p.unRealizedProfit);
               var cmargin = posMargin(p);
               var croi = cmargin > 0 ? (cpnl / cmargin) * 100 : null;
-              return (cpnl >= 0 ? "+" : "") + fmtMoney(cpnl) + " USDT (" + fmtPctSigned(croi) + ")";
+              return (cpnl >= 0 ? "+" : "") + fmtMoney(cpnl) + unitSuffix() + " (" + fmtPctSigned(croi) + ")";
             })()]
           ],
           sendLabel: "Tutup Posisi",
@@ -3604,7 +3802,7 @@
           $("apiKeyInput").value = "";
           $("apiSecretInput").value = "";
           closeApiModal();
-          addLog("API key terhubung ke " + net().label + ". Saldo USDT tersedia: " + fmtMoney(state.usdtAvail) + ".", "ok");
+          addLog("API key terhubung ke " + net().label + ". Saldo tersedia: " + fmtMoney(state.usdtAvail) + unitSuffix() + ".", "ok");
           toast("Terhubung ke Binance " + net().label + ".", "ok");
           refreshAccount();
           loadIncomeHistory(true);
@@ -3630,20 +3828,25 @@
       function switchView(name){
         state.view = name;
         var isRisk = name === "risk";
-        $("viewTerminal").hidden = isRisk;
+        var isSet = name === "settings";
+        $("viewTerminal").hidden = isRisk || isSet;
         $("viewRisk").hidden = !isRisk;
-        $("navTerminal").classList.toggle("active", !isRisk);
+        $("viewSettings").hidden = !isSet;
+        $("navTerminal").classList.toggle("active", name === "terminal");
         $("navRisk").classList.toggle("active", isRisk);
+        $("navSettings").classList.toggle("active", isSet);
         // Panel order di HP menempel di bawah layar — sembunyikan di menu
-        // risiko supaya tidak menghalangi isi menu ini.
+        // lain supaya tidak menghalangi isi menu itu.
         var op = $("orderPanel");
-        if (op) op.style.display = isRisk ? "none" : "";
+        if (op) op.style.display = name === "terminal" ? "" : "none";
         var ob = $("orderBackdrop");
-        if (ob && isRisk) ob.classList.remove("show");
+        if (ob && name !== "terminal") ob.classList.remove("show");
         window.scrollTo({ top: 0, behavior: "smooth" });
         if (isRisk){
           if (state.connected) loadIncomeHistory(false);
           renderPnlAndRisk();
+        } else if (isSet){
+          renderRateUi();
         } else {
           drawChart();
         }
@@ -3800,6 +4003,24 @@
         /* ---------- Menu utama ---------- */
         $("navTerminal").addEventListener("click", function(){ switchView("terminal"); });
         $("navRisk").addEventListener("click", function(){ switchView("risk"); });
+        $("navSettings").addEventListener("click", function(){ switchView("settings"); });
+
+        /* ---------- Pengaturan mata uang (USDT / Rupiah) ---------- */
+        document.querySelectorAll("#curSeg button").forEach(function(b){
+          b.addEventListener("click", function(){ setCurrency(b.dataset.cur); });
+        });
+        $("btnRateFetch").addEventListener("click", function(){ fetchIdrRate(true); });
+        $("rateInput").addEventListener("change", function(){
+          var v = parseFloat(this.value);
+          if (v > 0){
+            state.usdIdrRate = v;
+            state.usdIdrAt = Date.now();
+            state.usdIdrSrc = "diisi manual di Pengaturan";
+            refreshCurrencyDisplays();
+            toast("Kurs manual dipakai: 1 USDT = Rp " + fmtIdr(v) + ".");
+          }
+        });
+        $("limitPrice").addEventListener("input", updateLimitHint);
 
         /* ---------- Menu Risiko & Keuntungan ---------- */
         $("btnRefreshPnl").addEventListener("click", function(){
@@ -3845,8 +4066,8 @@
             return;
           }
           var notional = qty * entry;
-          out.innerHTML = "Anggaran risiko: <b>" + fmtMoney(riskAmt) + " USDT</b> (" + state.risk.perTradePct + "% saldo) · Jarak SL: " + fmtPrice(dist) +
-            "<br>Jumlah aman: <b>" + qty + " " + esc(state.symbol.replace(/USDT$/, "")) + "</b> untuk " + esc(state.symbol) + " · Nilai posisi ≈ " + fmtMoney(notional) + " USDT" +
+          out.innerHTML = "Anggaran risiko: <b>" + fmtMoney(riskAmt) + unitSuffix() + "</b> (" + state.risk.perTradePct + "% saldo) · Jarak SL: " + fmtPrice(dist) +
+            "<br>Jumlah aman: <b>" + qty + " " + esc(state.symbol.replace(/USDT$/, "")) + "</b> untuk " + esc(state.symbol) + " · Nilai posisi ≈ " + fmtMoney(notional) + unitSuffix() +
             '<br><button type="button" class="btn btn-small" id="btnCalcApply" style="margin-top:8px">Pakai Jumlah Ini di Panel Order</button>';
           var applyBtn = $("btnCalcApply");
           if (applyBtn) applyBtn.addEventListener("click", function(){
@@ -4037,6 +4258,10 @@
         renderDiagList();
         runDiagnostics();
         renderAccount();
+        renderRateUi();
+        // Kurs diambil senyap di latar belakang sejak awal, supaya mode
+        // Rupiah di Pengaturan langsung siap begitu dipilih pengguna.
+        fetchIdrRate(false);
         addLog("Halaman siap. Semua harga, grafik, dan order memakai Futures Mainnet (uang asli).", "");
       }
 
